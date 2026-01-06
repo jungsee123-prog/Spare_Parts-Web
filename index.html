@@ -1,11 +1,83 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <title>예비품 재고 관리</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>예비품 재고 관리</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input, button { margin: 5px; padding: 6px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+  </style>
+</head>
+<body>
+
+<h2>예비품 재고 관리</h2>
+
+<input id="search" placeholder="예비품명 검색" />
+<button onclick="loadParts()">검색</button>
+
+<hr />
+
+<h3>입고 / 수정</h3>
+<input id="name" placeholder="예비품명" />
+<input id="qty" type="number" placeholder="수량" />
+<input id="loc" placeholder="보관 위치" />
+<button onclick="savePart()">저장</button>
+
+<table>
+  <thead>
+    <tr>
+      <th>예비품명</th>
+      <th>수량</th>
+      <th>보관 위치</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
+
+<script>
+  const supabase = supabasejs.createClient(
+    "https://tgkwhchuoxuvitnsaqjo.supabase.co",
+    "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y"
+  );
+
+  async function loadParts() {
+    const keyword = document.getElementById("search").value;
+    let query = supabase.from("Spare_Parts").select("*");
+
+    if (keyword) query = query.ilike("name", `%${keyword}%`);
+
+    const { data } = await query;
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
+
+    data.forEach(row => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${row.name}</td>
+          <td>${row.quantity}</td>
+          <td>${row.location}</td>
+        </tr>
+      `;
+    });
+  }
+
+  async function savePart() {
+    const name = document.getElementById("name").value;
+    const quantity = document.getElementById("qty").value;
+    const location = document.getElementById("loc").value;
+
+    await supabase.from("Spare_Parts").insert([
+      { name, quantity, location }
+    ]);
+
+    loadParts();
+  }
+
+  loadParts();
+</script>
+
+</body>
 </html>
