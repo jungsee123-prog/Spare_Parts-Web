@@ -1,10 +1,52 @@
-<script>
-  alert("스크립트 실행됨");
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>예비품 재고 관리</title>
 
+  <!-- Supabase CDN (안정 버전) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input, button { margin: 5px; padding: 6px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+
+<h2>예비품 재고 관리</h2>
+
+<!-- 검색 -->
+<input id="search" placeholder="예비품명 검색" />
+<button onclick="loadParts()">검색</button>
+
+<hr />
+
+<!-- 입력 -->
+<h3>입고 / 수정</h3>
+<input id="name" placeholder="예비품명" />
+<input id="qty" type="number" placeholder="수량" />
+<input id="loc" placeholder="보관 위치" />
+<input id="note" placeholder="비고" />
+<button onclick="savePart()">저장</button>
+
+<!-- 목록 -->
+<table>
+  <thead>
+    <tr>
+      <th>예비품명</th>
+      <th>수량</th>
+      <th>보관 위치</th>
+      <th>비고</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
 
 <script>
-  
-  // 1. Supabase 클라이언트 생성
+  /* ===== Supabase 연결 정보 ===== */
   const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
   const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 
@@ -13,11 +55,11 @@
     SUPABASE_KEY
   );
 
-  // 2. 목록 불러오기
+  /* ===== 목록 불러오기 ===== */
   async function loadParts() {
     const keyword = document.getElementById("search").value;
 
-    let query = sb.from("Spare_Parts").select("*");
+    let query = sb.from("Spare_Parts").select("*").order("created_at", { ascending: false });
 
     if (keyword) {
       query = query.ilike("name", `%${keyword}%`);
@@ -45,16 +87,21 @@
     });
   }
 
-  // 3. 저장
+  /* ===== 저장 ===== */
   async function savePart() {
     const name = document.getElementById("name").value;
-    const quantity = document.getElementById("qty").value;
+    const quantity = Number(document.getElementById("qty").value);
     const location = document.getElementById("loc").value;
     const note = document.getElementById("note").value;
 
-    const { error } = await sb
-      .from("Spare_Parts")
-      .insert([{ name, quantity, location, note }]);
+    if (!name || !location) {
+      alert("예비품명과 보관 위치는 필수입니다.");
+      return;
+    }
+
+    const { error } = await sb.from("Spare_Parts").insert([
+      { name, quantity, location, note }
+    ]);
 
     if (error) {
       alert("저장 오류: " + error.message);
@@ -64,6 +111,9 @@
     }
   }
 
-  // 4. 최초 로딩
+  /* 최초 로딩 */
   loadParts();
 </script>
+
+</body>
+</html>
