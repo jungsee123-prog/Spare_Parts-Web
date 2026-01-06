@@ -1,55 +1,30 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <title>예비품 재고 관리</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    input, button { margin: 5px; padding: 6px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-  </style>
-</head>
-<body>
-
-<h2>예비품 재고 관리</h2>
-
-<input id="search" placeholder="예비품명 검색" />
-<button onclick="loadParts()">검색</button>
-
-<hr />
-
-<h3>입고 / 수정</h3>
-<input id="name" placeholder="예비품명" />
-<input id="qty" type="number" placeholder="수량" />
-<input id="loc" placeholder="보관 위치" />
-<button onclick="savePart()">저장</button>
-
-<table>
-  <thead>
-    <tr>
-      <th>예비품명</th>
-      <th>수량</th>
-      <th>보관 위치</th>
-    </tr>
-  </thead>
-  <tbody id="list"></tbody>
-</table>
-
 <script>
-  const sb = supabase.createClient(
-    "https://tgkwhchuoxuvitnsaqjo.supabase.co",
-    "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y"
+  // 1. Supabase 클라이언트 생성
+  const SUPABASE_URL = "여기에_PROJECT_URL";
+  const SUPABASE_KEY = "여기에_PUBLISHABLE_KEY";
+
+  const sb = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
   );
 
+  // 2. 목록 불러오기
   async function loadParts() {
     const keyword = document.getElementById("search").value;
+
     let query = sb.from("Spare_Parts").select("*");
 
-    if (keyword) query = query.ilike("name", `%${keyword}%`);
+    if (keyword) {
+      query = query.ilike("name", `%${keyword}%`);
+    }
 
-    const { data } = await query;
+    const { data, error } = await query;
+
+    if (error) {
+      alert("조회 오류: " + error.message);
+      return;
+    }
+
     const tbody = document.getElementById("list");
     tbody.innerHTML = "";
 
@@ -59,25 +34,31 @@
           <td>${row.name}</td>
           <td>${row.quantity}</td>
           <td>${row.location}</td>
+          <td>${row.note ?? ""}</td>
         </tr>
       `;
     });
   }
 
+  // 3. 저장
   async function savePart() {
     const name = document.getElementById("name").value;
     const quantity = document.getElementById("qty").value;
     const location = document.getElementById("loc").value;
+    const note = document.getElementById("note").value;
 
-    await sb.from("Spare_Parts").insert([
-      { name, quantity, location }
-    ]);
+    const { error } = await sb
+      .from("Spare_Parts")
+      .insert([{ name, quantity, location, note }]);
 
-    loadParts();
+    if (error) {
+      alert("저장 오류: " + error.message);
+    } else {
+      alert("저장 성공");
+      loadParts();
+    }
   }
 
+  // 4. 최초 로딩
   loadParts();
 </script>
-
-</body>
-</html>
