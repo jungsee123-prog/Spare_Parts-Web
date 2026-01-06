@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 /* 🔴 여기만 나중에 바꿉니다 */
 const supabase = createClient(
-  "여기에_SUPABASE_PROJECT_URL",
-  "여기에_SUPABASE_ANON_KEY"
+  "https://tgkwhchuoxuvitnsaqjo.supabase.co",
+  "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y"
 );
 
 export default function SparePartsApp() {
