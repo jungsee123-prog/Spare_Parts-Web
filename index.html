@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <title>예비품 재고 관리</title>
 
-  <!-- Supabase CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input, select, button { margin: 5px; padding: 6px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    tr:hover { background: #f5f5f5; }
   </style>
 </head>
 <body>
@@ -24,7 +24,6 @@
 
 <hr />
 
-<!-- 입력 -->
 <h3>입고 등록</h3>
 
 <select id="main_category" onchange="updateMidCategory()">
@@ -36,27 +35,27 @@
 </select>
 
 <input id="part_name" placeholder="예비품명" />
-<input id="quantity" type="number" placeholder="수량" />
+<input id="quantity" type="number" placeholder="입고 수량" />
 <input id="location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
 <button onclick="savePart()">입고 저장</button>
 
+<hr />
+
 <h3>출고 처리</h3>
 
-<select id="out_part">
-  <option value="">출고 예비품 선택</option>
-</select>
-
+<input id="out_part_id" type="number" placeholder="예비품 ID" />
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_note" placeholder="출고 사유" />
 
 <button onclick="outPart()">출고</button>
-  
+
 <!-- 목록 -->
 <table>
   <thead>
     <tr>
+      <th>ID</th>
       <th>대분류</th>
       <th>중분류</th>
       <th>예비품명</th>
@@ -69,14 +68,11 @@
 </table>
 
 <script>
-  /* ===== Supabase 연결 정보 ===== */
-  const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
+/* ===== Supabase ===== */
+const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 
-  const sb = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   /* ===== 분류 목록 (고정값) ===== */
   const CATEGORIES = {
@@ -90,132 +86,126 @@
     
   };
 
-  /* ===== 대분류 로딩 ===== */
-  function loadMainCategory() {
-    const mainSelect = document.getElementById("main_category");
 
-    for (const main in CATEGORIES) {
-      const option = document.createElement("option");
-      option.value = main;
-      option.textContent = main;
-      mainSelect.appendChild(option);
-    }
+
+/* ===== 대분류 로드 ===== */
+function loadMainCategory() {
+  const sel = document.getElementById("main_category");
+  for (const key in CATEGORIES) {
+    const o = document.createElement("option");
+    o.value = key;
+    o.textContent = key;
+    sel.appendChild(o);
+  }
+}
+
+/* ===== 중분류 ===== */
+function updateMidCategory() {
+  const main = main_category.value;
+  mid_category.innerHTML = '<option value="">중분류 선택</option>';
+  if (!main) return;
+
+  CATEGORIES[main].forEach(m => {
+    const o = document.createElement("option");
+    o.value = m;
+    o.textContent = m;
+    mid_category.appendChild(o);
+  });
+}
+
+/* ===== 목록 ===== */
+async function loadParts() {
+  const keyword = search.value;
+
+  let q = sb.from("spare_parts")
+    .select("*")
+    .order("id");
+
+  if (keyword) {
+    q = q.ilike("part_name", `%${keyword}%`);
   }
 
-  /* ===== 중분류 변경 ===== */
-  function updateMidCategory() {
-    const main = document.getElementById("main_category").value;
-    const midSelect = document.getElementById("mid_category");
+  const { data, error } = await q;
+  if (error) return alert(error.message);
 
-    midSelect.innerHTML = '<option value="">중분류 선택</option>';
+  list.innerHTML = "";
+  data.forEach(r => {
+    list.innerHTML += `
+      <tr>
+        <td>${r.id}</td>
+        <td>${r.main_category}</td>
+        <td>${r.mid_category}</td>
+        <td>${r.part_name}</td>
+        <td>${r.quantity}</td>
+        <td>${r.location}</td>
+        <td>${r.note ?? ""}</td>
+      </tr>
+    `;
+  });
+}
 
-    if (!main) return;
+/* ===== 입고 ===== */
+async function savePart() {
+  const data = {
+    main_category: main_category.value,
+    mid_category: mid_category.value,
+    part_name: part_name.value,
+    quantity: Number(quantity.value),
+    location: location.value,
+    note: note.value
+  };
 
-    CATEGORIES[main].forEach(mid => {
-      const option = document.createElement("option");
-      option.value = mid;
-      option.textContent = mid;
-      midSelect.appendChild(option);
-    });
+  if (!data.main_category || !data.mid_category || !data.part_name) {
+    return alert("필수값 누락");
   }
 
-  /* ===== 목록 불러오기 ===== */
-  async function loadParts() {
-    const keyword = document.getElementById("search").value;
-
-    let query = sb
-      .from("spare_parts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (keyword) {
-      query = query.ilike("part_name", `%${keyword}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      alert("조회 오류: " + error.message);
-      return;
-    }
-
-    const tbody = document.getElementById("list");
-    tbody.innerHTML = "";
-
-    data.forEach(row => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${row.main_category ?? ""}</td>
-          <td>${row.mid_category ?? ""}</td>
-          <td>${row.part_name}</td>
-          <td>${row.quantity}</td>
-          <td>${row.location}</td>
-          <td>${row.note ?? ""}</td>
-        </tr>
-      `;
-    });
+  const { error } = await sb.from("spare_parts").insert([data]);
+  if (error) alert(error.message);
+  else {
+    alert("입고 완료");
+    loadParts();
   }
+}
 
-  /* ===== 저장 ===== */
-  async function savePart() {
-    const main_category = document.getElementById("main_category").value;
-    const mid_category = document.getElementById("mid_category").value;
-    const part_name = document.getElementById("part_name").value;
-    const quantity = Number(document.getElementById("quantity").value);
-    const location = document.getElementById("location").value;
-    const note = document.getElementById("note").value;
-
-    if (!main_category || !mid_category || !part_name || !location) {
-      alert("대분류, 중분류, 예비품명, 보관 위치는 필수입니다.");
-      return;
-    }
-
-    const { error } = await sb.from("spare_parts").insert([
-      { main_category, mid_category, part_name, quantity, location, note }
-    ]);
-
-    if (error) {
-      alert("저장 오류: " + error.message);
-    } else {
-      alert("저장 성공");
-      loadParts();
-    }
-  }
-
-/* ===== ★ 출고 ===== */
+/* ===== 출고 ===== */
 async function outPart() {
-  const partId = out_part.value;
-  const qty = Number(out_quantity.value);
+  const partId = Number(out_part_id.value);
+  const outQty = Number(out_quantity.value);
 
-  const { data } = await sb
+  if (!partId || !outQty) {
+    return alert("ID와 수량 입력");
+  }
+
+  // 현재 재고 조회
+  const { data: part } = await sb
     .from("spare_parts")
     .select("quantity")
     .eq("id", partId)
     .single();
 
-  if (data.quantity < qty) {
-    alert("재고 부족");
-    return;
+  if (!part || part.quantity < outQty) {
+    return alert("재고 부족");
   }
 
+  // 재고 차감
   await sb.from("spare_parts")
-    .update({ quantity: data.quantity - qty })
+    .update({ quantity: part.quantity - outQty })
     .eq("id", partId);
 
-  await sb.from("spare_parts_logs").insert([{
+  // 출고 이력 저장
+  await sb.from("spare_parts_out").insert([{
     part_id: partId,
-    type: "OUT",
-    quantity: qty,
-    note: out_note.value
+    out_quantity: outQty,
+    out_note: out_note.value
   }]);
 
   alert("출고 완료");
   loadParts();
 }
-  
-  /* 최초 실행 */
-  loadMainCategory();
-  loadParts();
+
+/* 시작 */
+loadMainCategory();
+loadParts();
 </script>
 
 </body>
