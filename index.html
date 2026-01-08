@@ -54,33 +54,6 @@
 
 <button onclick="outPart()">출고</button>
 
-/* ===== 출고용 예비품 목록 로딩 ===== */
-async function loadOutParts() {
-  const select = document.getElementById("out_part_id");
-  select.innerHTML = '<option value="">출고 예비품 선택</option>';
-
-  const { data, error } = await sb
-    .from("spare_parts")
-    .select("id, main_category, mid_category, part_name, quantity")
-    .order("main_category");
-
-  if (error) {
-    alert("출고 목록 오류: " + error.message);
-    return;
-  }
-
-  data.forEach(p => {
-    if (p.quantity > 0) {
-      const option = document.createElement("option");
-      option.value = p.id;
-      option.textContent =
-        `${p.part_name} (${p.main_category} / ${p.mid_category}) [재고:${p.quantity}]`;
-      select.appendChild(option);
-    }
-  });
-}
-
-
   
 <!-- 목록 -->
 <table>
@@ -218,6 +191,34 @@ async function savePart() {
   }
 }
 
+/* ===== 출고용 예비품 목록 로딩 ===== */
+  
+async function loadOutParts() {
+  const select = document.getElementById("out_part_id");
+  select.innerHTML = '<option value="">출고 예비품 선택</option>';
+
+  const { data, error } = await sb
+    .from("spare_parts")
+    .select("id, main_category, mid_category, part_name, quantity")
+    .order("main_category");
+
+  if (error) {
+    alert("출고 목록 오류: " + error.message);
+    return;
+  }
+
+  data.forEach(p => {
+    if (p.quantity > 0) {
+      const option = document.createElement("option");
+      option.value = p.id;
+      option.textContent =
+        `${p.part_name} (${p.main_category} / ${p.mid_category}) [재고:${p.quantity}]`;
+      select.appendChild(option);
+    }
+  });
+}
+
+  
 /* ===== 출고 이력 불러오기 ===== */
 async function loadOutLogs() {
   const tbody = document.getElementById("out_log_list");
