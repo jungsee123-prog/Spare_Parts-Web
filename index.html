@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>예비품 재고 관리</title>
 
+  <!-- Supabase CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
@@ -11,7 +12,7 @@
     input, select, button { margin: 5px; padding: 6px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; }
-    tr:hover { background: #f5f5f5; }
+    th { background: #f0f0f0; }
   </style>
 </head>
 <body>
@@ -24,6 +25,7 @@
 
 <hr />
 
+<!-- 입고 -->
 <h3>입고 등록</h3>
 
 <select id="main_category" onchange="updateMidCategory()">
@@ -35,7 +37,7 @@
 </select>
 
 <input id="part_name" placeholder="예비품명" />
-<input id="quantity" type="number" placeholder="입고 수량" />
+<input id="quantity" type="number" placeholder="수량" />
 <input id="location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
@@ -43,6 +45,7 @@
 
 <hr />
 
+<!-- 출고 -->
 <h3>출고 처리</h3>
 
 <select id="out_part_id">
@@ -50,16 +53,17 @@
 </select>
 
 <input id="out_quantity" type="number" placeholder="출고 수량" />
-<input id="out_note" placeholder="출고 사유" />
+<input id="out_note" placeholder="비고" />
 
-<button onclick="outPart()">출고</button>
+<button onclick="outPart()">출고 처리</button>
 
-  
-<!-- 목록 -->
+<hr />
+
+<!-- 재고 목록 -->
+<h3>현재 재고</h3>
 <table>
   <thead>
     <tr>
-      <th>ID</th>
       <th>대분류</th>
       <th>중분류</th>
       <th>예비품명</th>
@@ -73,8 +77,8 @@
 
 <hr />
 
+<!-- 출고 이력 -->
 <h3>출고 이력</h3>
-
 <table>
   <thead>
     <tr>
@@ -89,88 +93,61 @@
   <tbody id="out_log_list"></tbody>
 </table>
 
-
-  
 <script>
 /* ===== Supabase ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  /* ===== 분류 목록 (고정값) ===== */
-  const CATEGORIES = {
-    "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
-    "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
-    "소화가스이용설비": ["가스정제설비", "제습장치", "워터트랩", "공급가스이송블로워", "가스압축기", "부취제 설비", "냉각설비", "냉각수 순환펌프", "소화가스 완충탱크", "소화가스 저장탱크", "보일러", "잉여가스연소기", "승압블로워", "수요처 가스이송"],
-    "소화슬러지설비": ["슬러지저장조", "슬러지저장조 교반기", "슬러지 이송펌프", "슬러지 공급펌프", "응집반응조", "탈수기", "가압부상조", "가압순환펌프", "폴리머 설비"],
-    "폐수처리설비": ["유량조정조", "유량조정조 교반기", "유량조정조 이송펌프", "유량조정조 바이패스펌프", "UMBR조", "BFS 침전조", "처리수조", "처리수 이송펌프", "질산화조", "질산화조 송풍기", "연계처리수조", "연계처리수조 교반기", "연계처리수 이송펌프", "수충격방지설비", "스컴저장조", "스컴이송펌프", "잉여슬러지 인발펌프", "내부반송펌프", "슬러지 반송펌프", "열교환기", "냉각설비", "냉각순환펌프", "폐수약품설비", "가압부상조"],
-    "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
-    "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
-    
-  };
+/* ===== 분류 ===== */
+const CATEGORIES = {
+  "반입및전처리설비": ["유압유니트", "스크류컨베이어"],
+  "탈수설비": ["벨트프레스", "원심탈수기"]
+};
 
-
-
-/* ===== 대분류 로드 ===== */
+/* ===== 대분류 ===== */
 function loadMainCategory() {
   const sel = document.getElementById("main_category");
-  for (const key in CATEGORIES) {
-    const o = document.createElement("option");
-    o.value = key;
-    o.textContent = key;
-    sel.appendChild(o);
+  for (const k in CATEGORIES) {
+    sel.innerHTML += `<option value="${k}">${k}</option>`;
   }
 }
 
 /* ===== 중분류 ===== */
 function updateMidCategory() {
-  const main = main_category.value;
-  mid_category.innerHTML = '<option value="">중분류 선택</option>';
+  const main = document.getElementById("main_category").value;
+  const mid = document.getElementById("mid_category");
+  mid.innerHTML = '<option value="">중분류 선택</option>';
   if (!main) return;
-
   CATEGORIES[main].forEach(m => {
-    const o = document.createElement("option");
-    o.value = m;
-    o.textContent = m;
-    mid_category.appendChild(o);
+    mid.innerHTML += `<option value="${m}">${m}</option>`;
   });
 }
 
-/* ===== 목록 ===== */
+/* ===== 재고 조회 ===== */
 async function loadParts() {
-  const keyword = search.value;
-
-  let q = sb.from("spare_parts")
-    .select("*")
-    .order("id");
-
-  if (keyword) {
-    q = q.ilike("part_name", `%${keyword}%`);
-  }
-
-  const { data, error } = await q;
-  if (error) return alert(error.message);
-
-  list.innerHTML = "";
+  const keyword = document.getElementById("search").value;
+  let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
+  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
+  const { data } = await q;
+  const tbody = document.getElementById("list");
+  tbody.innerHTML = "";
   data.forEach(r => {
-    list.innerHTML += `
+    tbody.innerHTML += `
       <tr>
-        <td>${r.id}</td>
         <td>${r.main_category}</td>
         <td>${r.mid_category}</td>
         <td>${r.part_name}</td>
         <td>${r.quantity}</td>
         <td>${r.location}</td>
         <td>${r.note ?? ""}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 }
 
 /* ===== 입고 ===== */
 async function savePart() {
-  const data = {
+  const row = {
     main_category: main_category.value,
     mid_category: mid_category.value,
     part_name: part_name.value,
@@ -178,121 +155,41 @@ async function savePart() {
     location: location.value,
     note: note.value
   };
-
-  if (!data.main_category || !data.mid_category || !data.part_name) {
-    return alert("필수값 누락");
-  }
-
-  const { error } = await sb.from("spare_parts").insert([data]);
-  if (error) alert(error.message);
-  else {
-    alert("입고 완료");
-    loadParts();
-  }
+  const { error } = await sb.from("spare_parts").insert([row]);
+  if (error) return alert(error.message);
+  alert("입고 완료");
+  loadParts();
+  loadOutParts();
 }
 
-/* ===== 출고용 예비품 목록 로딩 ===== */
-  
+/* ===== 출고 드롭다운 ===== */
 async function loadOutParts() {
-  const select = document.getElementById("out_part_id");
-  select.innerHTML = '<option value="">출고 예비품 선택</option>';
-
-  const { data, error } = await sb
+  const sel = document.getElementById("out_part_id");
+  sel.innerHTML = '<option value="">출고 예비품 선택</option>';
+  const { data } = await sb
     .from("spare_parts")
     .select("id, main_category, mid_category, part_name, quantity")
-    .order("main_category");
-
-  if (error) {
-    alert("출고 목록 오류: " + error.message);
-    return;
-  }
-
+    .gt("quantity", 0);
   data.forEach(p => {
-    if (p.quantity > 0) {
-      const option = document.createElement("option");
-      option.value = p.id;
-      option.textContent =
-        `${p.part_name} (${p.main_category} / ${p.mid_category}) [재고:${p.quantity}]`;
-      select.appendChild(option);
-    }
+    sel.innerHTML += `<option value="${p.id}">
+      ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
+    </option>`;
   });
 }
 
-  
-/* ===== 출고 이력 불러오기 ===== */
-async function loadOutLogs() {
-  const tbody = document.getElementById("out_log_list");
-  tbody.innerHTML = "";
-
-  const { data, error } = await sb
-    .from("spare_parts_logs")
-    .select(`
-      id,
-      quantity,
-      note,
-      created_at,
-      spare_parts (
-        main_category,
-        mid_category,
-        part_name
-      )
-    `)
-    .eq("type", "OUT")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    alert("출고 이력 조회 오류: " + error.message);
-    return;
-  }
-
-  data.forEach(row => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${new Date(row.created_at).toLocaleString()}</td>
-        <td>${row.spare_parts?.main_category ?? ""}</td>
-        <td>${row.spare_parts?.mid_category ?? ""}</td>
-        <td>${row.spare_parts?.part_name ?? ""}</td>
-        <td>${row.quantity}</td>
-        <td>${row.note ?? ""}</td>
-      </tr>
-    `;
-  });
-}
-
-    
-
-  
-/* ===== 출고 ===== */
+/* ===== 출고 처리 ===== */
 async function outPart() {
-  const partId = Number(out_part_id.value);
-  const outQty = Number(out_quantity.value);
+  const id = Number(out_part_id.value);
+  const qty = Number(out_quantity.value);
+  if (!id || qty <= 0) return alert("출고 정보 확인");
 
-  if (!partId || !outQty) {
-    return alert("ID와 수량 입력");
-  }
+  const { data } = await sb.from("spare_parts").select("quantity").eq("id", id).single();
+  if (data.quantity < qty) return alert("재고 부족");
 
-  // 현재 재고 조회
-  const { data: part } = await sb
-    .from("spare_parts")
-    .select("quantity")
-    .eq("id", partId)
-    .single();
-
-  if (!part || part.quantity < outQty) {
-    return alert("재고 부족");
-  }
-
-  // 재고 차감
-  await sb.from("spare_parts")
-    .update({ quantity: part.quantity - outQty })
-    .eq("id", partId);
-
-  // 출고 이력 저장
-  await sb.from("spare_parts_out").insert([{
-    part_id: partId,
-    out_quantity: outQty,
-    out_note: out_note.value
-  }]);
+  await sb.from("spare_parts").update({ quantity: data.quantity - qty }).eq("id", id);
+  await sb.from("spare_parts_logs").insert([
+    { part_id: id, type: "OUT", quantity: qty, note: out_note.value }
+  ]);
 
   alert("출고 완료");
   loadParts();
@@ -300,11 +197,36 @@ async function outPart() {
   loadOutLogs();
 }
 
-  
-/* 시작 */
+/* ===== 출고 이력 ===== */
+async function loadOutLogs() {
+  const { data } = await sb
+    .from("spare_parts_logs")
+    .select(`
+      quantity, note, created_at,
+      spare_parts ( main_category, mid_category, part_name )
+    `)
+    .eq("type", "OUT")
+    .order("created_at", { ascending:false });
+
+  const tbody = document.getElementById("out_log_list");
+  tbody.innerHTML = "";
+  data.forEach(r => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td>${r.spare_parts?.main_category ?? ""}</td>
+        <td>${r.spare_parts?.mid_category ?? ""}</td>
+        <td>${r.spare_parts?.part_name ?? ""}</td>
+        <td>${r.quantity}</td>
+        <td>${r.note ?? ""}</td>
+      </tr>`;
+  });
+}
+
+/* ===== 최초 실행 ===== */
 loadMainCategory();
 loadParts();
-loadOutParts(); 
+loadOutParts();
 loadOutLogs();
 </script>
 
