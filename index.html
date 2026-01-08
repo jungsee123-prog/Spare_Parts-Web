@@ -40,8 +40,19 @@
 <input id="location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
-<button onclick="savePart()">저장</button>
+<button onclick="savePart()">입고 저장</button>
 
+<h3>출고 처리</h3>
+
+<select id="out_part">
+  <option value="">출고 예비품 선택</option>
+</select>
+
+<input id="out_quantity" type="number" placeholder="출고 수량" />
+<input id="out_note" placeholder="출고 사유" />
+
+<button onclick="outPart()">출고</button>
+  
 <!-- 목록 -->
 <table>
   <thead>
@@ -171,6 +182,37 @@
     }
   }
 
+/* ===== ★ 출고 ===== */
+async function outPart() {
+  const partId = out_part.value;
+  const qty = Number(out_quantity.value);
+
+  const { data } = await sb
+    .from("spare_parts")
+    .select("quantity")
+    .eq("id", partId)
+    .single();
+
+  if (data.quantity < qty) {
+    alert("재고 부족");
+    return;
+  }
+
+  await sb.from("spare_parts")
+    .update({ quantity: data.quantity - qty })
+    .eq("id", partId);
+
+  await sb.from("spare_parts_logs").insert([{
+    part_id: partId,
+    type: "OUT",
+    quantity: qty,
+    note: out_note.value
+  }]);
+
+  alert("출고 완료");
+  loadParts();
+}
+  
   /* 최초 실행 */
   loadMainCategory();
   loadParts();
