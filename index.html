@@ -199,6 +199,19 @@ if (error) {
   return;
 }
 
+// 선택된 예비품 정보 가져오기
+const { data: part, error } = await sb
+  .from("spare_parts")
+  .select("main_category, mid_category, part_name")
+  .eq("id", id)
+  .single();
+
+if (error) {
+  alert("예비품 조회 오류");
+  return;
+}
+
+// 출고 이력 저장
 await sb.from("spare_parts_logs").insert([
   {
     part_id: id,
