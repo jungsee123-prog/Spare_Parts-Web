@@ -186,25 +186,63 @@ async function loadOutParts() {
 
 /* ===== 출고 처리 ===== */
 async function outPart() {
-  const id = Number(out_part_id.value);
-  const qty = Number(out_quantity.value);
-  if (!id || qty <= 0) return alert("출고 정보 확인");
+  const id = Number(document.getElementById("out_part_id").value);
+  const qty = Number(document.getElementById("out_quantity").value);
+  const note = document.getElementById("out_note").value;
 
-  const { data } = await sb.from("spare_parts").select("quantity").eq("id", id).single();
-  if (data.quantity < qty) return alert("재고 부족");
+  if (!id || qty <= 0) {
+    alert("출고할 예비품과 수량을 입력하세요.");
+    return;
+  }
 
-  await sb.from("spare_parts").update({ quantity: data.quantity - qty }).eq("id", id);
-// 선택된 예비품 정보 가져오기
-const { data: part, error } = await sb
-  .from("spare_parts")
-  .select("main_category, mid_category, part_name")
-  .eq("id", id)
-  .single();
+  // 현재 재고 조회
+  const { data: stock, error: stockError } = await sb
+    .from("spare_parts")
+    .select("quantity, main_category, mid_category, part_name")
+    .eq("id", id)
+    .single();
 
-if (error) {
-  alert("예비품 조회 오류");
-  return;
+  if (stockError) {
+    alert("재고 조회 오류");
+    return;
+  }
+
+  if (stock.quantity < qty) {
+    alert("재고가 부족합니다.");
+    return;
+  }
+
+  // 재고 차감
+  await sb
+    .from("spare_parts")
+    .update({ quantity: stock.quantity - qty })
+    .eq("id", id);
+
+  // 출고 이력 저장
+  const { error: logError } = await sb.from("spare_parts_logs").insert([
+    {
+      part_id: id,
+      type: "OUT",
+      quantity: qty,
+      note: note,
+      main_category: stock.main_category,
+      mid_category: stock.mid_category,
+      part_name: stock.part_name
+    }
+  ]);
+
+  if (logError) {
+    alert("출고 이력 저장 오류: " + logError.message);
+    return;
+  }
+
+  alert("출고 완료");
+
+  loadParts();
+  loadOutParts();
+  loadOutLogs();
 }
+
 
 // 선택된 예비품 정보 가져오기
 const { data: part, error } = await sb
