@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <title>예비품 재고 관리</title>
 
-  <!-- Supabase CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input, select, button { margin: 5px; padding: 6px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    hr { margin: 30px 0; }
   </style>
 </head>
 <body>
@@ -40,7 +40,21 @@
 <input id="location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
-<button onclick="savePart()">저장</button>
+<button onclick="savePart()">입고 저장</button>
+
+<hr />
+
+<!-- 출고 등록 -->
+<h3>출고 등록</h3>
+
+<input id="out_part_name" placeholder="예비품명" />
+<input id="out_quantity" type="number" placeholder="출고 수량" />
+<input id="out_location" placeholder="출고 위치" />
+<input id="out_note" placeholder="비고" />
+
+<button onclick="saveOut()">출고 등록</button>
+
+<hr />
 
 <!-- 재고 목록 -->
 <table>
@@ -58,16 +72,12 @@
 </table>
 
 <script>
-  /* ===== Supabase 연결 정보 ===== */
+  /* ===== Supabase 연결 ===== */
   const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
   const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const sb = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  /* ===== 분류 목록 (고정값) ===== */
+  /* ===== 분류 ===== */
 const CATEGORIES = {
   "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
     "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
@@ -78,100 +88,97 @@ const CATEGORIES = {
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-  /* ===== 대분류 로딩 ===== */
   function loadMainCategory() {
-    const mainSelect = document.getElementById("main_category");
-    mainSelect.innerHTML = '<option value="">대분류 선택</option>';
-
-    for (const main in CATEGORIES) {
-      const option = document.createElement("option");
-      option.value = main;
-      option.textContent = main;
-      mainSelect.appendChild(option);
+    const el = document.getElementById("main_category");
+    el.innerHTML = '<option value="">대분류 선택</option>';
+    for (const k in CATEGORIES) {
+      el.innerHTML += `<option value="${k}">${k}</option>`;
     }
   }
 
-  /* ===== 중분류 변경 ===== */
   function updateMidCategory() {
     const main = document.getElementById("main_category").value;
-    const midSelect = document.getElementById("mid_category");
-
-    midSelect.innerHTML = '<option value="">중분류 선택</option>';
-
+    const el = document.getElementById("mid_category");
+    el.innerHTML = '<option value="">중분류 선택</option>';
     if (!main) return;
-
-    CATEGORIES[main].forEach(mid => {
-      const option = document.createElement("option");
-      option.value = mid;
-      option.textContent = mid;
-      midSelect.appendChild(option);
+    CATEGORIES[main].forEach(m => {
+      el.innerHTML += `<option value="${m}">${m}</option>`;
     });
   }
 
-  /* ===== 재고 목록 불러오기 ===== */
+  /* ===== 재고 조회 ===== */
   async function loadParts() {
     const keyword = document.getElementById("search").value;
+    let q = sb.from("spare_parts").select("*").order("created_at", { ascending: false });
+    if (keyword) q = q.ilike("part_name", `%${keyword}%`);
 
-    let query = sb
-      .from("spare_parts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (keyword) {
-      query = query.ilike("part_name", `%${keyword}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      alert("조회 오류: " + error.message);
-      return;
-    }
+    const { data, error } = await q;
+    if (error) return alert(error.message);
 
     const tbody = document.getElementById("list");
     tbody.innerHTML = "";
-
-    data.forEach(row => {
+    data.forEach(r => {
       tbody.innerHTML += `
         <tr>
-          <td>${row.main_category ?? ""}</td>
-          <td>${row.mid_category ?? ""}</td>
-          <td>${row.part_name}</td>
-          <td>${row.quantity}</td>
-          <td>${row.location}</td>
-          <td>${row.note ?? ""}</td>
-        </tr>
-      `;
+          <td>${r.main_category}</td>
+          <td>${r.mid_category}</td>
+          <td>${r.part_name}</td>
+          <td>${r.quantity}</td>
+          <td>${r.location}</td>
+          <td>${r.note ?? ""}</td>
+        </tr>`;
     });
   }
 
-  /* ===== 입고 저장 ===== */
+  /* ===== 입고 ===== */
   async function savePart() {
-    const main_category = document.getElementById("main_category").value;
-    const mid_category = document.getElementById("mid_category").value;
-    const part_name = document.getElementById("part_name").value;
-    const quantity = Number(document.getElementById("quantity").value);
-    const location = document.getElementById("location").value;
-    const note = document.getElementById("note").value;
+    const row = {
+      main_category: main_category.value,
+      mid_category: mid_category.value,
+      part_name: part_name.value,
+      quantity: Number(quantity.value),
+      location: location.value,
+      note: note.value
+    };
 
-    if (!main_category || !mid_category || !part_name || !location) {
-      alert("대분류, 중분류, 예비품명, 보관 위치는 필수입니다.");
+    if (!row.main_category || !row.mid_category || !row.part_name) {
+      alert("입고 항목을 모두 입력하세요");
       return;
     }
 
-    const { error } = await sb.from("spare_parts").insert([
-      { main_category, mid_category, part_name, quantity, location, note }
-    ]);
-
-    if (error) {
-      alert("저장 오류: " + error.message);
-    } else {
-      alert("저장 성공");
+    const { error } = await sb.from("spare_parts").insert([row]);
+    if (error) alert(error.message);
+    else {
+      alert("입고 저장 완료");
       loadParts();
     }
   }
 
-  /* ===== 최초 실행 ===== */
+  /* ===== 출고 (등록만) ===== */
+  async function saveOut() {
+    const row = {
+      part_name: out_part_name.value,
+      quantity: Number(out_quantity.value),
+      location: out_location.value,
+      note: out_note.value
+    };
+
+    if (!row.part_name || !row.quantity) {
+      alert("출고 예비품명과 수량은 필수입니다");
+      return;
+    }
+
+    const { error } = await sb.from("spare_parts_logs").insert([row]);
+    if (error) alert(error.message);
+    else {
+      alert("출고 등록 완료");
+      out_part_name.value = "";
+      out_quantity.value = "";
+      out_location.value = "";
+      out_note.value = "";
+    }
+  }
+
   loadMainCategory();
   loadParts();
 </script>
