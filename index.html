@@ -12,9 +12,6 @@
     input, select, button { margin: 5px; padding: 6px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-
-    .in { color: blue !important; font-weight: bold; }
-    .out { color: red !important; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -117,7 +114,8 @@ function loadMainCategory() {
 function updateMidCategory() {
   const main = document.getElementById("main_category").value;
   const mid = document.getElementById("mid_category");
-  mid.innerHTML = `<option value="">중분류 선택</option>`;
+  mid.innerHTML = '<option value="">중분류 선택</option>';
+
   if (!main) return;
 
   CATEGORIES[main].forEach(m => {
@@ -130,7 +128,15 @@ function updateMidCategory() {
 
 /* ===== 재고 조회 ===== */
 async function loadParts() {
-  const { data } = await sb.from("spare_parts").select("*");
+  const { data, error } = await sb
+    .from("spare_parts")
+    .select("*")
+    .order("part_name");
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   const tbody = document.getElementById("list");
   tbody.innerHTML = "";
@@ -213,21 +219,23 @@ async function saveOut() {
 
 /* ===== 이력 조회 ===== */
 async function loadLogs() {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("spare_parts_logs")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   const tbody = document.getElementById("log_list");
   tbody.innerHTML = "";
 
   data.forEach(l => {
-    const cls = l.type === "IN" ? "in" : "out";
-    const label = l.type === "IN" ? "입고" : "출고";
-
     tbody.innerHTML += `
       <tr>
-        <td class="${cls}">${label}</td>
+        <td>${l.type === "IN" ? "입고" : "출고"}</td>
         <td>${l.main_category}</td>
         <td>${l.mid_category}</td>
         <td>${l.part_name}</td>
