@@ -6,7 +6,8 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <style>
+  
+
 <style>
 /* 전체 */
 body {
@@ -93,6 +94,40 @@ tbody tr:hover {
   font-weight: bold;
 }
 
+ .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+  }
+
+  .header .title h2 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .header .title span {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .company {
+    text-align: right;
+  }
+
+  .company-name {
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  .company img {
+    height: 40px;
+  }
+  
     /* ===== 입·출고 색상 ===== */
     .type-in {
       color: blue;
@@ -106,7 +141,19 @@ tbody tr:hover {
 </head>
 <body>
 
-<h2>예비품 재고 관리</h2>
+<div class="header">
+  <div class="title">
+    <h2>예비품 재고 관리</h2>
+    <span>환경바이오 사업소</span>
+  </div>
+
+  <div class="company">
+    <!-- 로고 이미지가 있으면 사용 -->
+    <!-- <img src="logo.png" alt="회사 로고"> -->
+    <div class="company-name">대전도시공사</div>
+  </div>
+</div>
+
 
 <input id="search" placeholder="예비품명 검색" />
 <button onclick="loadParts()">검색</button>
