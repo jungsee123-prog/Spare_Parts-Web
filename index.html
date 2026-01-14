@@ -9,7 +9,7 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input, select, button { margin: 5px; padding: 6px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; }
     th { background:#f0f0f0; }
   </style>
@@ -72,23 +72,6 @@
 
 <hr />
 
-<h3>출고 이력</h3>
-<table>
-  <thead>
-    <tr>
-      <th>출고일</th>
-      <th>대분류</th>
-      <th>중분류</th>
-      <th>예비품명</th>
-      <th>출고수량</th>
-      <th>비고</th>
-    </tr>
-  </thead>
-  <tbody id="out_log_list"></tbody>
-</table>
-
-<hr />
-
 <h3>입·출고 통합 이력</h3>
 <table>
   <thead>
@@ -113,35 +96,39 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ===== 분류 ===== */
 const CATEGORIES = {
-  "반입및전처리설비": ["반입장","호퍼 자동개폐기","음식물 배출컨베이어","음식물 이송컨베이어","음식물 공급컨베이어","협잡물 이송컨베이어","1차 파쇄기","가용화조","가용화조 블로워","음폐수저장조#A","음폐수저장조#B","음폐수저장조 교반기","중간저장조","중간저장조 교반기","슬러리 이송펌프","음폐수 이송펌프","유압유니트","드럼스크린","드럼스크린 테이퍼스크류","회전분쇄공급기","미세분쇄기"],
-  "혐기성소화설비": ["혐기성소화조","가스저장조","안정화조","안정화조 교반기","임펄스펌프","소화슬러지 이송펌프","소화액반송펌프","열교환순환펌프","침전물배출펌프","가온순환펌프","공기압축기"],
-  "소화가스이용설비": ["가스정제설비","제습장치","워터트랩","공급가스이송블로워","가스압축기","부취제 설비","냉각설비","냉각수 순환펌프","소화가스 완충탱크","소화가스 저장탱크","보일러","잉여가스연소기","승압블로워","수요처 가스이송"],
-  "소화슬러지설비": ["슬러지저장조","슬러지저장조 교반기","슬러지 이송펌프","슬러지 공급펌프","응집반응조","탈수기","가압부상조","가압순환펌프","폴리머 설비"],
-  "폐수처리설비": ["유량조정조","유량조정조 교반기","유량조정조 이송펌프","유량조정조 바이패스펌프","UMBR조","BFS 침전조","처리수조","처리수 이송펌프","질산화조","질산화조 송풍기","연계처리수조","연계처리수조 교반기","연계처리수 이송펌프","수충격방지설비","스컴저장조","스컴이송펌프","잉여슬러지 인발펌프","내부반송펌프","슬러지 반송펌프","열교환기","냉각설비","냉각순환펌프","폐수약품설비","가압부상조"],
-  "악취제거설비": ["고농도 탈취기","고농도 탈취팬","고농도 순환펌프","중저농도 탈취기","중저농도 탈취팬","중저농도 순환펌프","RTO 설비"],
-  "기타설비": ["공정수조","지하수조","소방수조","공정수 부스터 펌프","지하수 부스터 펌프","소방펌프","소방설비","압롤박스실","SUMP#1","SUMP#2","SUMP#3","SUMP#4","SUMP#5","SUMP#6","기계설비실","배수로","시설동","소화동","비상저류조","기타"]
+  "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
+    "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
+    "소화가스이용설비": ["가스정제설비", "제습장치", "워터트랩", "공급가스이송블로워", "가스압축기", "부취제 설비", "냉각설비", "냉각수 순환펌프", "소화가스 완충탱크", "소화가스 저장탱크", "보일러", "잉여가스연소기", "승압블로워", "수요처 가스이송"],
+    "소화슬러지설비": ["슬러지저장조", "슬러지저장조 교반기", "슬러지 이송펌프", "슬러지 공급펌프", "응집반응조", "탈수기", "가압부상조", "가압순환펌프", "폴리머 설비"],
+    "폐수처리설비": ["유량조정조", "유량조정조 교반기", "유량조정조 이송펌프", "유량조정조 바이패스펌프", "UMBR조", "BFS 침전조", "처리수조", "처리수 이송펌프", "질산화조", "질산화조 송풍기", "연계처리수조", "연계처리수조 교반기", "연계처리수 이송펌프", "수충격방지설비", "스컴저장조", "스컴이송펌프", "잉여슬러지 인발펌프", "내부반송펌프", "슬러지 반송펌프", "열교환기", "냉각설비", "냉각순환펌프", "폐수약품설비", "가압부상조"],
+    "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
+    "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-/* 대분류 */
+/* ===== 대분류 ===== */
 function loadMainCategory() {
+  const sel = document.getElementById("main_category");
   for (const k in CATEGORIES) {
-    main_category.innerHTML += `<option value="${k}">${k}</option>`;
+    sel.innerHTML += `<option value="${k}">${k}</option>`;
   }
 }
 
-/* 중분류 */
+/* ===== 중분류 ===== */
 function updateMidCategory() {
+  const main = main_category.value;
   mid_category.innerHTML = '<option value="">중분류 선택</option>';
-  if (!main_category.value) return;
-  CATEGORIES[main_category.value].forEach(m => {
+  if (!main) return;
+  CATEGORIES[main].forEach(m => {
     mid_category.innerHTML += `<option value="${m}">${m}</option>`;
   });
 }
 
-/* 재고 조회 */
+/* ===== 재고 조회 ===== */
 async function loadParts() {
+  const keyword = search.value;
   let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
-  if (search.value) q = q.ilike("part_name", `%${search.value}%`);
+  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
+
   const { data } = await q;
   list.innerHTML = "";
   data.forEach(r => {
@@ -157,7 +144,7 @@ async function loadParts() {
   });
 }
 
-/* 입고 */
+/* ===== 입고 ===== */
 async function savePart() {
   const row = {
     main_category: main_category.value,
@@ -168,77 +155,94 @@ async function savePart() {
     note: note.value
   };
 
-  await sb.from("spare_parts").insert([row]);
+  const { data, error } = await sb
+    .from("spare_parts")
+    .insert([row])
+    .select()
+    .single();
+
+  if (error) return alert(error.message);
+
   await sb.from("spare_parts_logs").insert([{
-    ...row,
-    type: "IN"
+    part_id: data.id,
+    type: "IN",
+    quantity: row.quantity,
+    main_category: row.main_category,
+    mid_category: row.mid_category,
+    part_name: row.part_name,
+    note: row.note
   }]);
 
+  alert("입고 완료");
   loadParts();
   loadOutParts();
-  loadOutLogs();
   loadAllLogs();
 }
 
-/* 출고 목록 */
+/* ===== 출고 목록 ===== */
 async function loadOutParts() {
   out_part_id.innerHTML = '<option value="">출고 예비품 선택</option>';
-  const { data } = await sb.from("spare_parts").select("*").gt("quantity",0);
+  const { data } = await sb
+    .from("spare_parts")
+    .select("id, main_category, mid_category, part_name, quantity")
+    .gt("quantity", 0);
+
   data.forEach(p => {
-    out_part_id.innerHTML += `<option value="${p.id}">
-      ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
-    </option>`;
+    out_part_id.innerHTML += `
+      <option value="${p.id}">
+        ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
+      </option>`;
   });
 }
 
-/* 출고 */
+/* ===== 출고 처리 ===== */
 async function outPart() {
   const id = Number(out_part_id.value);
   const qty = Number(out_quantity.value);
-  if (!id || qty <= 0) return alert("출고 정보 입력");
 
-  const { data: stock } = await sb.from("spare_parts").select("*").eq("id",id).single();
-  if (stock.quantity < qty) return alert("재고 부족");
+  if (!id || qty <= 0) {
+    alert("출고 항목과 수량을 입력하세요.");
+    return;
+  }
 
-  await sb.from("spare_parts").update({ quantity: stock.quantity - qty }).eq("id",id);
+  const { data: stock } = await sb
+    .from("spare_parts")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (stock.quantity < qty) {
+    alert("재고 부족");
+    return;
+  }
+
+  await sb.from("spare_parts")
+    .update({ quantity: stock.quantity - qty })
+    .eq("id", id);
+
   await sb.from("spare_parts_logs").insert([{
     part_id: id,
     type: "OUT",
     quantity: qty,
-    note: out_note.value,
     main_category: stock.main_category,
     mid_category: stock.mid_category,
-    part_name: stock.part_name
+    part_name: stock.part_name,
+    note: out_note.value
   }]);
 
+  alert("출고 완료");
   loadParts();
   loadOutParts();
-  loadOutLogs();
   loadAllLogs();
 }
 
-/* 출고 이력 */
-async function loadOutLogs() {
-  const { data } = await sb.from("spare_parts_logs")
-    .select("*").eq("type","OUT").order("created_at",{ascending:false});
-  out_log_list.innerHTML = "";
-  data.forEach(r => {
-    out_log_list.innerHTML += `
-      <tr>
-        <td>${new Date(r.created_at).toLocaleString()}</td>
-        <td>${r.main_category}</td>
-        <td>${r.mid_category}</td>
-        <td>${r.part_name}</td>
-        <td>${r.quantity}</td>
-        <td>${r.note ?? ""}</td>
-      </tr>`;
-  });
-}
-
-/* 입출고 통합 이력 */
+/* ===== 입·출고 통합 이력 ===== */
 async function loadAllLogs() {
-  const { data } = await sb.from("spare_parts_logs")
-    .select("*").order("created_at",{ascending:false});
+  const { data } = await sb
+    .from("spare_parts_logs")
+    .select("*")
+    .order("created_at", { ascending:false });
+
   all_log_list.innerHTML = "";
   data.forEach(l => {
     all_log_list.innerHTML += `
@@ -254,11 +258,10 @@ async function loadAllLogs() {
   });
 }
 
-/* 최초 실행 */
+/* ===== 최초 실행 ===== */
 loadMainCategory();
 loadParts();
 loadOutParts();
-loadOutLogs();
 loadAllLogs();
 </script>
 
