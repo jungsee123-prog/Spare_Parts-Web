@@ -103,10 +103,10 @@ const CATEGORIES = {
     "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
-  
+
 /* 대분류 */
 function loadMainCategory() {
-  const sel = document.getElementById("main_category");
+  const sel = main_category;
   for (const k in CATEGORIES) {
     sel.innerHTML += `<option value="${k}">${k}</option>`;
   }
@@ -114,11 +114,10 @@ function loadMainCategory() {
 
 /* 중분류 */
 function updateMidCategory() {
-  const main = main_category.value;
   const mid = mid_category;
   mid.innerHTML = '<option value="">중분류 선택</option>';
-  if (!main) return;
-  CATEGORIES[main].forEach(m => {
+  if (!main_category.value) return;
+  CATEGORIES[main_category.value].forEach(m => {
     mid.innerHTML += `<option value="${m}">${m}</option>`;
   });
 }
@@ -126,9 +125,10 @@ function updateMidCategory() {
 /* 재고 조회 */
 async function loadParts() {
   const keyword = search.value;
-  let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
+  let q = sb.from("spare_parts").select("*");
   if (keyword) q = q.ilike("part_name", `%${keyword}%`);
   const { data } = await q;
+
   list.innerHTML = "";
   data.forEach(r => {
     list.innerHTML += `
@@ -143,7 +143,7 @@ async function loadParts() {
   });
 }
 
-/* 입고 */
+/* ===== 입고 ===== */
 async function savePart() {
   const row = {
     main_category: main_category.value,
@@ -157,6 +157,17 @@ async function savePart() {
   const { error } = await sb.from("spare_parts").insert([row]);
   if (error) return alert(error.message);
 
+  /* ✅ 입고 로그 기록 (IN) */
+  await sb.from("spare_parts_logs").insert([{
+    part_id: null,
+    type: "IN",
+    quantity: Number(quantity.value),
+    note: note.value,
+    main_category: main_category.value,
+    mid_category: mid_category.value,
+    part_name: part_name.value
+  }]);
+
   alert("입고 완료");
   loadParts();
   loadOutParts();
@@ -164,17 +175,17 @@ async function savePart() {
 
 /* 출고 목록 */
 async function loadOutParts() {
-  const sel = out_part_id;
-  sel.innerHTML = '<option value="">출고 예비품 선택</option>';
+  out_part_id.innerHTML = '<option value="">출고 예비품 선택</option>';
   const { data } = await sb
     .from("spare_parts")
     .select("id, main_category, mid_category, part_name, quantity")
     .gt("quantity", 0);
 
   data.forEach(p => {
-    sel.innerHTML += `<option value="${p.id}">
-      ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
-    </option>`;
+    out_part_id.innerHTML += `
+      <option value="${p.id}">
+        ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
+      </option>`;
   });
 }
 
@@ -182,39 +193,26 @@ async function loadOutParts() {
 async function outPart() {
   const id = Number(out_part_id.value);
   const qty = Number(out_quantity.value);
-  const note = out_note.value;
-
-  if (!id || qty <= 0) {
-    alert("출고할 예비품과 수량을 입력하세요.");
-    return;
-  }
 
   const { data: stock } = await sb
     .from("spare_parts")
-    .select("quantity, main_category, mid_category, part_name")
+    .select("*")
     .eq("id", id)
     .single();
-
-  if (stock.quantity < qty) {
-    alert("재고 부족");
-    return;
-  }
 
   await sb.from("spare_parts")
     .update({ quantity: stock.quantity - qty })
     .eq("id", id);
 
-  await sb.from("spare_parts_logs").insert([
-    {
-      part_id: id,
-      type: "OUT",
-      quantity: qty,
-      note: note,
-      main_category: stock.main_category,
-      mid_category: stock.mid_category,
-      part_name: stock.part_name
-    }
-  ]);
+  await sb.from("spare_parts_logs").insert([{
+    part_id: id,
+    type: "OUT",
+    quantity: qty,
+    note: out_note.value,
+    main_category: stock.main_category,
+    mid_category: stock.mid_category,
+    part_name: stock.part_name
+  }]);
 
   alert("출고 완료");
   loadParts();
