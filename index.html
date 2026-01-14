@@ -10,9 +10,11 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input, select, button { margin: 5px; padding: 6px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    h3 { margin-top: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+
+    .in { color: blue; font-weight: bold; }
+    .out { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -23,23 +25,9 @@
 <input id="search" placeholder="예비품명 검색" />
 <button onclick="loadParts()">검색</button>
 
-<!-- 재고 목록 -->
-<table>
-  <thead>
-    <tr>
-      <th>대분류</th>
-      <th>중분류</th>
-      <th>예비품명</th>
-      <th>수량</th>
-      <th>보관 위치</th>
-      <th>비고</th>
-    </tr>
-  </thead>
-  <tbody id="parts_list"></tbody>
-</table>
-
 <hr />
 
+<!-- 입고 -->
 <h3>입고 등록</h3>
 
 <select id="main_category" onchange="updateMidCategory()">
@@ -51,36 +39,39 @@
 </select>
 
 <input id="part_name" placeholder="예비품명" />
-<input id="in_quantity" type="number" placeholder="입고 수량" />
+<input id="quantity" type="number" placeholder="수량" />
 <input id="location" placeholder="보관 위치" />
-<input id="in_note" placeholder="비고" />
+<input id="note" placeholder="비고" />
 
 <button onclick="savePart()">입고 저장</button>
 
 <hr />
 
-<h3>출고 처리</h3>
-
-<select id="out_part"></select>
-<input id="out_quantity" type="number" placeholder="출고 수량" />
-<input id="out_note" placeholder="비고" />
-
-<button onclick="outPart()">출고</button>
-
-<hr />
-
-<h3>입·출고 통합 이력</h3>
-
+<h3>재고 목록</h3>
 <table>
   <thead>
     <tr>
-      <th>구분</th>
       <th>대분류</th>
       <th>중분류</th>
       <th>예비품명</th>
       <th>수량</th>
-      <th>날짜</th>
+      <th>보관 위치</th>
       <th>비고</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
+
+<hr />
+
+<h3>입·출고 통합 이력</h3>
+<table>
+  <thead>
+    <tr>
+      <th>구분</th>
+      <th>예비품명</th>
+      <th>수량</th>
+      <th>일자</th>
     </tr>
   </thead>
   <tbody id="log_list"></tbody>
@@ -90,6 +81,7 @@
 /* ===== Supabase 연결 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ===== 분류 ===== */
@@ -103,194 +95,116 @@ const CATEGORIES = {
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-/* 대분류 로딩 */
+/* ===== 대분류 로딩 ===== */
 function loadMainCategory() {
   const sel = document.getElementById("main_category");
-  for (const k in CATEGORIES) {
-    sel.innerHTML += `<option value="${k}">${k}</option>`;
+  for (const key in CATEGORIES) {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = key;
+    sel.appendChild(opt);
   }
 }
 
-/* 중분류 변경 */
+/* ===== 중분류 변경 ===== */
 function updateMidCategory() {
   const main = document.getElementById("main_category").value;
-  const midSel = document.getElementById("mid_category");
-  midSel.innerHTML = '<option value="">중분류 선택</option>';
-
+  const mid = document.getElementById("mid_category");
+  mid.innerHTML = `<option value="">중분류 선택</option>`;
   if (!main) return;
 
-  CATEGORIES[main].forEach(v => {
-    midSel.innerHTML += `<option value="${v}">${v}</option>`;
+  CATEGORIES[main].forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    mid.appendChild(opt);
   });
 }
 
-/* 재고 조회 */
+/* ===== 재고 조회 ===== */
 async function loadParts() {
   const keyword = document.getElementById("search").value;
 
-  let q = sb.from("spare_parts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let q = sb.from("spare_parts").select("*");
 
-  if (keyword) {
-    q = q.ilike("part_name", `%${keyword}%`);
-  }
+  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
 
-  const { data, error } = await q;
-  if (error) {
-    alert(error.message);
-    return;
-  }
+  const { data } = await q;
 
-  const tbody = document.getElementById("parts_list");
-  const outSel = document.getElementById("out_part");
-
+  const tbody = document.getElementById("list");
   tbody.innerHTML = "";
-  outSel.innerHTML = "";
 
-  data.forEach(p => {
+  data.forEach(r => {
     tbody.innerHTML += `
       <tr>
-        <td>${p.main_category}</td>
-        <td>${p.mid_category}</td>
-        <td>${p.part_name}</td>
-        <td>${p.quantity}</td>
-        <td>${p.location}</td>
-        <td>${p.note ?? ""}</td>
+        <td>${r.main_category}</td>
+        <td>${r.mid_category}</td>
+        <td>${r.part_name}</td>
+        <td>${r.quantity}</td>
+        <td>${r.location}</td>
+        <td>${r.note ?? ""}</td>
       </tr>
-    `;
-
-    outSel.innerHTML += `
-      <option value="${p.id}">
-        ${p.part_name} (재고:${p.quantity})
-      </option>
     `;
   });
 }
 
-/* 입고 */
+/* ===== 입고 저장 ===== */
 async function savePart() {
-  const main = document.getElementById("main_category").value;
-  const mid = document.getElementById("mid_category").value;
-  const name = document.getElementById("part_name").value;
-  const qty = parseInt(document.getElementById("in_quantity").value, 10);
-  const loc = document.getElementById("location").value;
-  const note = document.getElementById("in_note").value;
+  const main_category = document.getElementById("main_category").value;
+  const mid_category = document.getElementById("mid_category").value;
+  const part_name = document.getElementById("part_name").value;
+  const quantity = Number(document.getElementById("quantity").value);
+  const location = document.getElementById("location").value;
+  const note = document.getElementById("note").value;
 
-  if (!main || !mid || !name || !loc || isNaN(qty)) {
-    alert("입력값을 확인하세요");
+  if (!main_category || !mid_category || !part_name || !quantity) {
+    alert("필수 항목 누락");
     return;
   }
 
-  const { data, error } = await sb
-    .from("spare_parts")
-    .insert([
-      {
-        main_category: main,
-        mid_category: mid,
-        part_name: name,
-        quantity: qty,
-        location: loc,
-        note: note
-      }
-    ])
-    .select()
-    .single();
+  // 재고 추가
+  await sb.from("spare_parts").insert([{
+    main_category, mid_category, part_name, quantity, location, note
+  }]);
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
+  // 이력 저장
+  await sb.from("spare_parts_logs").insert([{
+    part_name,
+    quantity,
+    type: "IN"
+  }]);
 
-  await sb.from("spare_parts_logs").insert([
-    { part_id: data.id, type: "IN", quantity: qty, note: note }
-  ]);
-
+  alert("입고 완료");
   loadParts();
   loadLogs();
 }
 
-/* 출고 */
-async function outPart() {
-  const partId = document.getElementById("out_part").value;
-  const qty = parseInt(document.getElementById("out_quantity").value, 10);
-  const note = document.getElementById("out_note").value;
-
-  if (!partId || isNaN(qty)) {
-    alert("출고 수량을 확인하세요");
-    return;
-  }
-
-  const { data, error } = await sb
-    .from("spare_parts")
-    .select("*")
-    .eq("id", partId)
-    .single();
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  if (data.quantity < qty) {
-    alert("재고 부족");
-    return;
-  }
-
-  await sb
-    .from("spare_parts")
-    .update({ quantity: data.quantity - qty })
-    .eq("id", partId);
-
-  await sb.from("spare_parts_logs").insert([
-    { part_id: partId, type: "OUT", quantity: qty, note: note }
-  ]);
-
-  loadParts();
-  loadLogs();
-}
-
-/* 통합 이력 */
+/* ===== 입출고 이력 조회 ===== */
 async function loadLogs() {
-  const { data, error } = await sb
+  const { data } = await sb
     .from("spare_parts_logs")
-    .select(`
-      type,
-      quantity,
-      note,
-      created_at,
-      spare_parts (
-        main_category,
-        mid_category,
-        part_name
-      )
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
 
   const tbody = document.getElementById("log_list");
   tbody.innerHTML = "";
 
   data.forEach(l => {
+    const cls = l.type === "IN" ? "in" : "out";
+    const label = l.type === "IN" ? "입고" : "출고";
+
     tbody.innerHTML += `
       <tr>
-        <td>${l.type === "IN" ? "입고" : "출고"}</td>
-        <td>${l.spare_parts?.main_category ?? ""}</td>
-        <td>${l.spare_parts?.mid_category ?? ""}</td>
-        <td>${l.spare_parts?.part_name ?? ""}</td>
+        <td class="${cls}">${label}</td>
+        <td>${l.part_name}</td>
         <td>${Math.abs(l.quantity)}</td>
-        <td>${new Date(l.created_at).toLocaleDateString()}</td>
-        <td>${l.note ?? ""}</td>
+        <td>${l.created_at.slice(0,10)}</td>
       </tr>
     `;
   });
 }
 
-/* 최초 실행 */
+/* ===== 최초 실행 ===== */
 loadMainCategory();
 loadParts();
 loadLogs();
