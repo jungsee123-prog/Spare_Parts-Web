@@ -181,10 +181,15 @@ async function savePart() {
 
 /* ===== 입출고 이력 조회 ===== */
 async function loadLogs() {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("spare_parts_logs")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   const tbody = document.getElementById("log_list");
   tbody.innerHTML = "";
@@ -198,7 +203,7 @@ async function loadLogs() {
         <td class="${cls}">${label}</td>
         <td>${l.part_name}</td>
         <td>${Math.abs(l.quantity)}</td>
-        <td>${l.created_at.slice(0,10)}</td>
+        <td>${l.created_at.slice(0, 10)}</td>
       </tr>
     `;
   });
