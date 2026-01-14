@@ -12,6 +12,16 @@
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; }
     th { background:#f0f0f0; }
+
+    /* ===== 입·출고 색상 ===== */
+    .type-in {
+      color: blue;
+      font-weight: bold;
+    }
+    .type-out {
+      color: red;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -105,25 +115,23 @@ const CATEGORIES = {
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-/* ===== 대분류 ===== */
+/* 대분류 */
 function loadMainCategory() {
-  const sel = document.getElementById("main_category");
   for (const k in CATEGORIES) {
-    sel.innerHTML += `<option value="${k}">${k}</option>`;
+    main_category.innerHTML += `<option value="${k}">${k}</option>`;
   }
 }
 
-/* ===== 중분류 ===== */
+/* 중분류 */
 function updateMidCategory() {
-  const main = main_category.value;
   mid_category.innerHTML = '<option value="">중분류 선택</option>';
-  if (!main) return;
-  CATEGORIES[main].forEach(m => {
+  if (!main_category.value) return;
+  CATEGORIES[main_category.value].forEach(m => {
     mid_category.innerHTML += `<option value="${m}">${m}</option>`;
   });
 }
 
-/* ===== 재고 조회 ===== */
+/* 재고 조회 */
 async function loadParts() {
   const keyword = search.value;
   let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
@@ -144,7 +152,7 @@ async function loadParts() {
   });
 }
 
-/* ===== 입고 ===== */
+/* 입고 */
 async function savePart() {
   const row = {
     main_category: main_category.value,
@@ -179,7 +187,7 @@ async function savePart() {
   loadAllLogs();
 }
 
-/* ===== 출고 목록 ===== */
+/* 출고 목록 */
 async function loadOutParts() {
   out_part_id.innerHTML = '<option value="">출고 예비품 선택</option>';
   const { data } = await sb
@@ -195,7 +203,7 @@ async function loadOutParts() {
   });
 }
 
-/* ===== 출고 처리 ===== */
+/* 출고 처리 */
 async function outPart() {
   const id = Number(out_part_id.value);
   const qty = Number(out_quantity.value);
@@ -236,7 +244,7 @@ async function outPart() {
   loadAllLogs();
 }
 
-/* ===== 입·출고 통합 이력 ===== */
+/* 입·출고 통합 이력 */
 async function loadAllLogs() {
   const { data } = await sb
     .from("spare_parts_logs")
@@ -245,10 +253,13 @@ async function loadAllLogs() {
 
   all_log_list.innerHTML = "";
   data.forEach(l => {
+    const typeClass = l.type === "IN" ? "type-in" : "type-out";
+    const typeText = l.type === "IN" ? "입고" : "출고";
+
     all_log_list.innerHTML += `
       <tr>
         <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td>${l.type === "IN" ? "입고" : "출고"}</td>
+        <td class="${typeClass}">${typeText}</td>
         <td>${l.main_category}</td>
         <td>${l.mid_category}</td>
         <td>${l.part_name}</td>
@@ -258,7 +269,7 @@ async function loadAllLogs() {
   });
 }
 
-/* ===== 최초 실행 ===== */
+/* 최초 실행 */
 loadMainCategory();
 loadParts();
 loadOutParts();
