@@ -45,7 +45,7 @@
 
 <input id="part_name" placeholder="예비품명" />
 <input id="quantity" type="number" placeholder="수량" />
-<input id="location" placeholder="보관 위치" />
+<input id="storage_location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
 <button onclick="savePart()">입고 저장</button>
@@ -155,13 +155,13 @@ async function loadParts() {
 /* 입고 */
 async function savePart() {
   const row = {
-    main_category: main_category.value,
-    mid_category: mid_category.value,
-    part_name: part_name.value,
-    quantity: Number(quantity.value),
-    location: location.value,
-    note: note.value
-  };
+  main_category: main_category.value,
+  mid_category: mid_category.value,
+  part_name: part_name.value,
+  quantity: Number(quantity.value),
+  location: storage_location.value, // 
+  note: note.value
+};
 
   const { data, error } = await sb
     .from("spare_parts")
