@@ -282,7 +282,7 @@ async function loadLogs() {
         <td>${l.spare_parts?.main_category ?? ""}</td>
         <td>${l.spare_parts?.mid_category ?? ""}</td>
         <td>${l.spare_parts?.part_name ?? ""}</td>
-        <td>${l.type === "IN" ? "+" : "-"}${l.quantity}</td>
+        <td>${Math.abs(l.quantity)}</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
         <td>${l.note ?? ""}</td>
       </tr>
