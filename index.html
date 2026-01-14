@@ -181,33 +181,24 @@ async function savePart() {
 
 /* ===== 입출고 이력 조회 ===== */
 async function loadLogs() {
-  const result = await sb
+  const { data } = await sb
     .from("spare_parts_logs")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (result.error) {
-    console.error(result.error);
-    alert("이력 조회 오류");
-    return;
-  }
-
-  const data = result.data;
   const tbody = document.getElementById("log_list");
   tbody.innerHTML = "";
 
   data.forEach(l => {
-    const type = l.type === "IN" ? "입고" : "출고";
     const cls = l.type === "IN" ? "in" : "out";
-    const qty = Math.abs(Number(l.quantity || 0));
-    const date = l.created_at ? l.created_at.slice(0, 10) : "";
+    const label = l.type === "IN" ? "입고" : "출고";
 
     tbody.innerHTML += `
       <tr>
-        <td class="${cls}">${type}</td>
-        <td>${l.part_name || ""}</td>
-        <td>${qty}</td>
-        <td>${date}</td>
+        <td class="${cls}">${label}</td>
+        <td>${l.part_name}</td>
+        <td>${Math.abs(l.quantity)}</td>
+        <td>${l.created_at.slice(0,10)}</td>
       </tr>
     `;
   });
