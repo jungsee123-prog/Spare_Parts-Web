@@ -154,11 +154,40 @@ async function savePart() {
     note: note.value
   };
 
-  const { error } = await sb.from("spare_parts").insert([row]);
-  if (error) return alert(error.message);
+// 1️⃣ 재고 저장
+const { data: partData, error } = await sb
+  .from("spare_parts")
+  .insert([
+    { main_category, mid_category, part_name, quantity, location, note }
+  ])
+  .select()
+  .single();
 
-  alert("입고 완료");
-  loadParts();
+if (error) {
+  alert("저장 오류: " + error.message);
+  return;
+}
+
+// 2️⃣ 입고 로그 저장
+const { error: logError } = await sb
+  .from("spare_parts_logs")
+  .insert([
+    {
+      part_id: partData.id,
+      type: "IN",
+      quantity: quantity,
+      note: note
+    }
+  ]);
+
+if (logError) {
+  alert("입고 이력 저장 오류: " + logError.message);
+  return;
+}
+
+alert("입고 + 이력 저장 성공");
+loadParts();
+
   loadOutParts();
 }
 
