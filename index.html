@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>예비품 재고 관리</title>
 
+  <!-- Supabase CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
@@ -34,7 +35,7 @@
       <th>비고</th>
     </tr>
   </thead>
-  <tbody id="list"></tbody>
+  <tbody id="parts_list"></tbody>
 </table>
 
 <hr />
@@ -50,9 +51,9 @@
 </select>
 
 <input id="part_name" placeholder="예비품명" />
-<input id="quantity" type="number" placeholder="수량" />
+<input id="in_quantity" type="number" placeholder="입고 수량" />
 <input id="location" placeholder="보관 위치" />
-<input id="note" placeholder="비고" />
+<input id="in_note" placeholder="비고" />
 
 <button onclick="savePart()">입고 저장</button>
 
@@ -63,6 +64,7 @@
 <select id="out_part"></select>
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_note" placeholder="비고" />
+
 <button onclick="outPart()">출고</button>
 
 <hr />
@@ -101,7 +103,6 @@ const CATEGORIES = {
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-
 /* 대분류 로딩 */
 function loadMainCategory() {
   const sel = document.getElementById("main_category");
@@ -113,23 +114,37 @@ function loadMainCategory() {
 /* 중분류 변경 */
 function updateMidCategory() {
   const main = document.getElementById("main_category").value;
-  const mid = document.getElementById("mid_category");
-  mid.innerHTML = '<option value="">중분류 선택</option>';
+  const midSel = document.getElementById("mid_category");
+  midSel.innerHTML = '<option value="">중분류 선택</option>';
+
   if (!main) return;
+
   CATEGORIES[main].forEach(v => {
-    mid.innerHTML += `<option value="${v}">${v}</option>`;
+    midSel.innerHTML += `<option value="${v}">${v}</option>`;
   });
 }
 
 /* 재고 조회 */
 async function loadParts() {
   const keyword = document.getElementById("search").value;
-  let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
-  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
-  const { data } = await q;
 
-  const tbody = document.getElementById("list");
+  let q = sb.from("spare_parts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (keyword) {
+    q = q.ilike("part_name", `%${keyword}%`);
+  }
+
+  const { data, error } = await q;
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const tbody = document.getElementById("parts_list");
   const outSel = document.getElementById("out_part");
+
   tbody.innerHTML = "";
   outSel.innerHTML = "";
 
@@ -142,28 +157,53 @@ async function loadParts() {
         <td>${p.quantity}</td>
         <td>${p.location}</td>
         <td>${p.note ?? ""}</td>
-      </tr>`;
-    outSel.innerHTML += `<option value="${p.id}">${p.part_name} (재고:${p.quantity})</option>`;
+      </tr>
+    `;
+
+    outSel.innerHTML += `
+      <option value="${p.id}">
+        ${p.part_name} (재고:${p.quantity})
+      </option>
+    `;
   });
 }
 
 /* 입고 */
 async function savePart() {
-  const main_category = main_category.value;
-  const mid_category = mid_category.value;
-  const part_name = part_name.value;
-  const qty = Number(document.getElementById("quantity").value);
-  const location = location.value;
-  const note = note.value;
+  const main = document.getElementById("main_category").value;
+  const mid = document.getElementById("mid_category").value;
+  const name = document.getElementById("part_name").value;
+  const qty = parseInt(document.getElementById("in_quantity").value, 10);
+  const loc = document.getElementById("location").value;
+  const note = document.getElementById("in_note").value;
 
-  const { data, error } = await sb.from("spare_parts")
-    .insert([{ main_category, mid_category, part_name, quantity, location, note }])
-    .select().single();
+  if (!main || !mid || !name || !loc || isNaN(qty)) {
+    alert("입력값을 확인하세요");
+    return;
+  }
 
-  if (error) return alert(error.message);
+  const { data, error } = await sb
+    .from("spare_parts")
+    .insert([
+      {
+        main_category: main,
+        mid_category: mid,
+        part_name: name,
+        quantity: qty,
+        location: loc,
+        note: note
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   await sb.from("spare_parts_logs").insert([
-    { part_id: data.id, type: "IN", quantity, note }
+    { part_id: data.id, type: "IN", quantity: qty, note: note }
   ]);
 
   loadParts();
@@ -172,19 +212,38 @@ async function savePart() {
 
 /* 출고 */
 async function outPart() {
-  const partId = out_part.value;
-  const qty = Number(out_quantity.value);
-  const note = out_note.value;
+  const partId = document.getElementById("out_part").value;
+  const qty = parseInt(document.getElementById("out_quantity").value, 10);
+  const note = document.getElementById("out_note").value;
 
-  const { data } = await sb.from("spare_parts").select("*").eq("id", partId).single();
-  if (data.quantity < qty) return alert("재고 부족");
+  if (!partId || isNaN(qty)) {
+    alert("출고 수량을 확인하세요");
+    return;
+  }
 
-  await sb.from("spare_parts")
+  const { data, error } = await sb
+    .from("spare_parts")
+    .select("*")
+    .eq("id", partId)
+    .single();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  if (data.quantity < qty) {
+    alert("재고 부족");
+    return;
+  }
+
+  await sb
+    .from("spare_parts")
     .update({ quantity: data.quantity - qty })
     .eq("id", partId);
 
   await sb.from("spare_parts_logs").insert([
-    { part_id: partId, type: "OUT", quantity: qty, note }
+    { part_id: partId, type: "OUT", quantity: qty, note: note }
   ]);
 
   loadParts();
@@ -193,13 +252,25 @@ async function outPart() {
 
 /* 통합 이력 */
 async function loadLogs() {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("spare_parts_logs")
     .select(`
-      type, quantity, note, created_at,
-      spare_parts ( main_category, mid_category, part_name )
+      type,
+      quantity,
+      note,
+      created_at,
+      spare_parts (
+        main_category,
+        mid_category,
+        part_name
+      )
     `)
-    .order("created_at", { ascending:false });
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   const tbody = document.getElementById("log_list");
   tbody.innerHTML = "";
@@ -214,7 +285,8 @@ async function loadLogs() {
         <td>${l.type === "IN" ? "+" : "-"}${l.quantity}</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
         <td>${l.note ?? ""}</td>
-      </tr>`;
+      </tr>
+    `;
   });
 }
 
