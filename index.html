@@ -13,15 +13,21 @@
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
 
-    .in { color: blue !important; font-weight: bold; }
-    .out { color: red !important; font-weight: bold; }
+    .in { color: blue; font-weight: bold; }
+    .out { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <h2>예비품 재고 관리</h2>
 
-<!-- ===== 입고 ===== -->
+<!-- 검색 -->
+<input id="search" placeholder="예비품명 검색" />
+<button onclick="loadParts()">검색</button>
+
+<hr />
+
+<!-- 입고 -->
 <h3>입고 등록</h3>
 
 <select id="main_category" onchange="updateMidCategory()">
@@ -37,22 +43,11 @@
 <input id="location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
 
-<button onclick="saveIn()">입고 저장</button>
+<button onclick="savePart()">입고 저장</button>
 
 <hr />
 
-<!-- ===== 출고 ===== -->
-<h3>출고 등록</h3>
-
-<input id="out_part_name" placeholder="예비품명" />
-<input id="out_quantity" type="number" placeholder="출고 수량" />
-
-<button onclick="saveOut()">출고 저장</button>
-
-<hr />
-
-<!-- ===== 재고 목록 ===== -->
-<h3>재고 현황</h3>
+<h3>재고 목록</h3>
 <table>
   <thead>
     <tr>
@@ -69,14 +64,11 @@
 
 <hr />
 
-<!-- ===== 입출고 이력 ===== -->
 <h3>입·출고 통합 이력</h3>
 <table>
   <thead>
     <tr>
       <th>구분</th>
-      <th>대분류</th>
-      <th>중분류</th>
       <th>예비품명</th>
       <th>수량</th>
       <th>일자</th>
@@ -89,6 +81,7 @@
 /* ===== Supabase 연결 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ===== 분류 ===== */
@@ -130,7 +123,13 @@ function updateMidCategory() {
 
 /* ===== 재고 조회 ===== */
 async function loadParts() {
-  const { data } = await sb.from("spare_parts").select("*");
+  const keyword = document.getElementById("search").value;
+
+  let q = sb.from("spare_parts").select("*");
+
+  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
+
+  const { data } = await q;
 
   const tbody = document.getElementById("list");
   tbody.innerHTML = "";
@@ -142,15 +141,15 @@ async function loadParts() {
         <td>${r.mid_category}</td>
         <td>${r.part_name}</td>
         <td>${r.quantity}</td>
-        <td>${r.location ?? ""}</td>
+        <td>${r.location}</td>
         <td>${r.note ?? ""}</td>
       </tr>
     `;
   });
 }
 
-/* ===== 입고 ===== */
-async function saveIn() {
+/* ===== 입고 저장 ===== */
+async function savePart() {
   const main_category = document.getElementById("main_category").value;
   const mid_category = document.getElementById("mid_category").value;
   const part_name = document.getElementById("part_name").value;
@@ -163,12 +162,16 @@ async function saveIn() {
     return;
   }
 
+  // 재고 추가
   await sb.from("spare_parts").insert([{
     main_category, mid_category, part_name, quantity, location, note
   }]);
 
+  // 이력 저장
   await sb.from("spare_parts_logs").insert([{
-    main_category, mid_category, part_name, quantity, type: "IN"
+    part_name,
+    quantity,
+    type: "IN"
   }]);
 
   alert("입고 완료");
@@ -176,42 +179,7 @@ async function saveIn() {
   loadLogs();
 }
 
-/* ===== 출고 ===== */
-async function saveOut() {
-  const part_name = document.getElementById("out_part_name").value;
-  const quantity = Number(document.getElementById("out_quantity").value);
-
-  if (!part_name || !quantity) {
-    alert("출고 정보 누락");
-    return;
-  }
-
-  // 재고 차감
-  await sb
-    .from("spare_parts")
-    .update({ quantity: sb.sql(`quantity - ${quantity}`) })
-    .eq("part_name", part_name);
-
-  const { data } = await sb
-    .from("spare_parts")
-    .select("main_category, mid_category")
-    .eq("part_name", part_name)
-    .single();
-
-  await sb.from("spare_parts_logs").insert([{
-    main_category: data.main_category,
-    mid_category: data.mid_category,
-    part_name,
-    quantity: -quantity,
-    type: "OUT"
-  }]);
-
-  alert("출고 완료");
-  loadParts();
-  loadLogs();
-}
-
-/* ===== 이력 조회 ===== */
+/* ===== 입출고 이력 조회 ===== */
 async function loadLogs() {
   const { data } = await sb
     .from("spare_parts_logs")
@@ -228,8 +196,6 @@ async function loadLogs() {
     tbody.innerHTML += `
       <tr>
         <td class="${cls}">${label}</td>
-        <td>${l.main_category}</td>
-        <td>${l.mid_category}</td>
         <td>${l.part_name}</td>
         <td>${Math.abs(l.quantity)}</td>
         <td>${l.created_at.slice(0,10)}</td>
