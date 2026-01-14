@@ -9,21 +9,37 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input, select, button { margin: 5px; padding: 6px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
     th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background:#f0f0f0; }
+    h3 { margin-top: 40px; }
   </style>
 </head>
 <body>
 
 <h2>예비품 재고 관리</h2>
 
+<!-- 검색 -->
 <input id="search" placeholder="예비품명 검색" />
 <button onclick="loadParts()">검색</button>
 
+<!-- 재고 목록 -->
+<table>
+  <thead>
+    <tr>
+      <th>대분류</th>
+      <th>중분류</th>
+      <th>예비품명</th>
+      <th>수량</th>
+      <th>보관 위치</th>
+      <th>비고</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
+
 <hr />
 
-<h3>입고</h3>
+<h3>입고 등록</h3>
 
 <select id="main_category" onchange="updateMidCategory()">
   <option value="">대분류 선택</option>
@@ -42,53 +58,34 @@
 
 <hr />
 
-<h3>출고</h3>
+<h3>출고 처리</h3>
 
-<select id="out_part_id">
-  <option value="">출고 예비품 선택</option>
-</select>
-
+<select id="out_part"></select>
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_note" placeholder="비고" />
-
-<button onclick="outPart()">출고 처리</button>
+<button onclick="outPart()">출고</button>
 
 <hr />
 
-<h3>현재 재고</h3>
+<h3>입·출고 통합 이력</h3>
+
 <table>
   <thead>
     <tr>
+      <th>구분</th>
       <th>대분류</th>
       <th>중분류</th>
       <th>예비품명</th>
       <th>수량</th>
-      <th>보관위치</th>
+      <th>날짜</th>
       <th>비고</th>
     </tr>
   </thead>
-  <tbody id="list"></tbody>
-</table>
-
-<hr />
-
-<h3>출고 이력</h3>
-<table>
-  <thead>
-    <tr>
-      <th>출고일</th>
-      <th>대분류</th>
-      <th>중분류</th>
-      <th>예비품명</th>
-      <th>출고수량</th>
-      <th>비고</th>
-    </tr>
-  </thead>
-  <tbody id="out_log_list"></tbody>
+  <tbody id="log_list"></tbody>
 </table>
 
 <script>
-/* ===== Supabase ===== */
+/* ===== Supabase 연결 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -103,8 +100,9 @@ const CATEGORIES = {
     "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
     "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
-  
-/* 대분류 */
+
+
+/* 대분류 로딩 */
 function loadMainCategory() {
   const sel = document.getElementById("main_category");
   for (const k in CATEGORIES) {
@@ -112,163 +110,110 @@ function loadMainCategory() {
   }
 }
 
-/* 중분류 */
+/* 중분류 변경 */
 function updateMidCategory() {
-  const main = main_category.value;
-  const mid = mid_category;
+  const main = document.getElementById("main_category").value;
+  const mid = document.getElementById("mid_category");
   mid.innerHTML = '<option value="">중분류 선택</option>';
   if (!main) return;
-  CATEGORIES[main].forEach(m => {
-    mid.innerHTML += `<option value="${m}">${m}</option>`;
+  CATEGORIES[main].forEach(v => {
+    mid.innerHTML += `<option value="${v}">${v}</option>`;
   });
 }
 
 /* 재고 조회 */
 async function loadParts() {
-  const keyword = search.value;
+  const keyword = document.getElementById("search").value;
   let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
   if (keyword) q = q.ilike("part_name", `%${keyword}%`);
   const { data } = await q;
-  list.innerHTML = "";
-  data.forEach(r => {
-    list.innerHTML += `
+
+  const tbody = document.getElementById("list");
+  const outSel = document.getElementById("out_part");
+  tbody.innerHTML = "";
+  outSel.innerHTML = "";
+
+  data.forEach(p => {
+    tbody.innerHTML += `
       <tr>
-        <td>${r.main_category}</td>
-        <td>${r.mid_category}</td>
-        <td>${r.part_name}</td>
-        <td>${r.quantity}</td>
-        <td>${r.location}</td>
-        <td>${r.note ?? ""}</td>
+        <td>${p.main_category}</td>
+        <td>${p.mid_category}</td>
+        <td>${p.part_name}</td>
+        <td>${p.quantity}</td>
+        <td>${p.location}</td>
+        <td>${p.note ?? ""}</td>
       </tr>`;
+    outSel.innerHTML += `<option value="${p.id}">${p.part_name} (재고:${p.quantity})</option>`;
   });
 }
 
 /* 입고 */
 async function savePart() {
-  const row = {
-    main_category: main_category.value,
-    mid_category: mid_category.value,
-    part_name: part_name.value,
-    quantity: Number(quantity.value),
-    location: location.value,
-    note: note.value
-  };
+  const main_category = main_category.value;
+  const mid_category = mid_category.value;
+  const part_name = part_name.value;
+  const quantity = Number(quantity.value);
+  const location = location.value;
+  const note = note.value;
 
-// 1️⃣ 재고 저장
-const { data: partData, error } = await sb
-  .from("spare_parts")
-  .insert([
-    { main_category, mid_category, part_name, quantity, location, note }
-  ])
-  .select()
-  .single();
+  const { data, error } = await sb.from("spare_parts")
+    .insert([{ main_category, mid_category, part_name, quantity, location, note }])
+    .select().single();
 
-if (error) {
-  alert("저장 오류: " + error.message);
-  return;
-}
+  if (error) return alert(error.message);
 
-// 2️⃣ 입고 로그 저장
-const { error: logError } = await sb
-  .from("spare_parts_logs")
-  .insert([
-    {
-      part_id: partData.id,
-      type: "IN",
-      quantity: quantity,
-      note: note
-    }
+  await sb.from("spare_parts_logs").insert([
+    { part_id: data.id, type: "IN", quantity, note }
   ]);
 
-if (logError) {
-  alert("입고 이력 저장 오류: " + logError.message);
-  return;
+  loadParts();
+  loadLogs();
 }
 
-alert("입고 + 이력 저장 성공");
-loadParts();
-
-  loadOutParts();
-}
-
-/* 출고 목록 */
-async function loadOutParts() {
-  const sel = out_part_id;
-  sel.innerHTML = '<option value="">출고 예비품 선택</option>';
-  const { data } = await sb
-    .from("spare_parts")
-    .select("id, main_category, mid_category, part_name, quantity")
-    .gt("quantity", 0);
-
-  data.forEach(p => {
-    sel.innerHTML += `<option value="${p.id}">
-      ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
-    </option>`;
-  });
-}
-
-/* 출고 처리 */
+/* 출고 */
 async function outPart() {
-  const id = Number(out_part_id.value);
+  const partId = out_part.value;
   const qty = Number(out_quantity.value);
   const note = out_note.value;
 
-  if (!id || qty <= 0) {
-    alert("출고할 예비품과 수량을 입력하세요.");
-    return;
-  }
-
-  const { data: stock } = await sb
-    .from("spare_parts")
-    .select("quantity, main_category, mid_category, part_name")
-    .eq("id", id)
-    .single();
-
-  if (stock.quantity < qty) {
-    alert("재고 부족");
-    return;
-  }
+  const { data } = await sb.from("spare_parts").select("*").eq("id", partId).single();
+  if (data.quantity < qty) return alert("재고 부족");
 
   await sb.from("spare_parts")
-    .update({ quantity: stock.quantity - qty })
-    .eq("id", id);
+    .update({ quantity: data.quantity - qty })
+    .eq("id", partId);
 
   await sb.from("spare_parts_logs").insert([
-    {
-      part_id: id,
-      type: "OUT",
-      quantity: qty,
-      note: note,
-      main_category: stock.main_category,
-      mid_category: stock.mid_category,
-      part_name: stock.part_name
-    }
+    { part_id: partId, type: "OUT", quantity: qty, note }
   ]);
 
-  alert("출고 완료");
   loadParts();
-  loadOutParts();
-  loadOutLogs();
+  loadLogs();
 }
 
-/* 출고 이력 */
-async function loadOutLogs() {
+/* 통합 이력 */
+async function loadLogs() {
   const { data } = await sb
     .from("spare_parts_logs")
-    .select("*")
-    .eq("type", "OUT")
+    .select(`
+      type, quantity, note, created_at,
+      spare_parts ( main_category, mid_category, part_name )
+    `)
     .order("created_at", { ascending:false });
 
-  out_log_list.innerHTML = "";
-  data.forEach(r => {
-    out_log_list.innerHTML += `
+  const tbody = document.getElementById("log_list");
+  tbody.innerHTML = "";
+
+  data.forEach(l => {
+    tbody.innerHTML += `
       <tr>
-        <td>${new Date(r.created_at).toLocaleString()}</td>
-        <td>${r.main_category}</td>
-        <td>${r.mid_category}</td>
-        <td>${r.part_name}</td>
-        <td>${r.quantity}</td>
-        <td>${r.note ?? ""}</td>
+        <td>${l.type === "IN" ? "입고" : "출고"}</td>
+        <td>${l.spare_parts?.main_category ?? ""}</td>
+        <td>${l.spare_parts?.mid_category ?? ""}</td>
+        <td>${l.spare_parts?.part_name ?? ""}</td>
+        <td>${l.type === "IN" ? "+" : "-"}${l.quantity}</td>
+        <td>${new Date(l.created_at).toLocaleDateString()}</td>
+        <td>${l.note ?? ""}</td>
       </tr>`;
   });
 }
@@ -276,8 +221,7 @@ async function loadOutLogs() {
 /* 최초 실행 */
 loadMainCategory();
 loadParts();
-loadOutParts();
-loadOutLogs();
+loadLogs();
 </script>
 
 </body>
