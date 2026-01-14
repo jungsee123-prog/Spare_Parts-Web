@@ -47,7 +47,10 @@
 <!-- 출고 등록 -->
 <h3>출고 등록</h3>
 
-<input id="out_part_name" placeholder="예비품명" />
+<select id="out_part_select">
+  <option value="">출고 예비품 선택</option>
+</select>
+
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_location" placeholder="출고 위치" />
 <input id="out_note" placeholder="비고" />
@@ -89,36 +92,33 @@ const CATEGORIES = {
 };
 
   function loadMainCategory() {
-    const el = document.getElementById("main_category");
-    el.innerHTML = '<option value="">대분류 선택</option>';
+    main_category.innerHTML = '<option value="">대분류 선택</option>';
     for (const k in CATEGORIES) {
-      el.innerHTML += `<option value="${k}">${k}</option>`;
+      main_category.innerHTML += `<option value="${k}">${k}</option>`;
     }
   }
 
   function updateMidCategory() {
-    const main = document.getElementById("main_category").value;
-    const el = document.getElementById("mid_category");
-    el.innerHTML = '<option value="">중분류 선택</option>';
+    const main = main_category.value;
+    mid_category.innerHTML = '<option value="">중분류 선택</option>';
     if (!main) return;
     CATEGORIES[main].forEach(m => {
-      el.innerHTML += `<option value="${m}">${m}</option>`;
+      mid_category.innerHTML += `<option value="${m}">${m}</option>`;
     });
   }
 
   /* ===== 재고 조회 ===== */
   async function loadParts() {
-    const keyword = document.getElementById("search").value;
+    const keyword = search.value;
     let q = sb.from("spare_parts").select("*").order("created_at", { ascending: false });
     if (keyword) q = q.ilike("part_name", `%${keyword}%`);
 
     const { data, error } = await q;
     if (error) return alert(error.message);
 
-    const tbody = document.getElementById("list");
-    tbody.innerHTML = "";
+    list.innerHTML = "";
     data.forEach(r => {
-      tbody.innerHTML += `
+      list.innerHTML += `
         <tr>
           <td>${r.main_category}</td>
           <td>${r.mid_category}</td>
@@ -127,6 +127,18 @@ const CATEGORIES = {
           <td>${r.location}</td>
           <td>${r.note ?? ""}</td>
         </tr>`;
+    });
+
+    loadOutDropdown(data);
+  }
+
+  /* ===== 출고 드롭다운 채우기 ===== */
+  function loadOutDropdown(parts) {
+    out_part_select.innerHTML = '<option value="">출고 예비품 선택</option>';
+
+    const unique = [...new Set(parts.map(p => p.part_name))];
+    unique.forEach(name => {
+      out_part_select.innerHTML += `<option value="${name}">${name}</option>`;
     });
   }
 
@@ -154,17 +166,17 @@ const CATEGORIES = {
     }
   }
 
-  /* ===== 출고 (등록만) ===== */
+  /* ===== 출고 등록 ===== */
   async function saveOut() {
     const row = {
-      part_name: out_part_name.value,
+      part_name: out_part_select.value,
       quantity: Number(out_quantity.value),
       location: out_location.value,
       note: out_note.value
     };
 
     if (!row.part_name || !row.quantity) {
-      alert("출고 예비품명과 수량은 필수입니다");
+      alert("출고 예비품과 수량을 입력하세요");
       return;
     }
 
@@ -172,7 +184,6 @@ const CATEGORIES = {
     if (error) alert(error.message);
     else {
       alert("출고 등록 완료");
-      out_part_name.value = "";
       out_quantity.value = "";
       out_location.value = "";
       out_note.value = "";
