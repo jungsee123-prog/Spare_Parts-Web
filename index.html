@@ -281,32 +281,54 @@ async function loadParts() {
 
 /* 입고 */
 async function savePart() {
-  const row = {
-  main_category: main_category.value,
-  mid_category: mid_category.value,
-  part_name: part_name.value,
-  quantity: Number(quantity.value),
-  location: storage_location.value, // 
-  note: note.value
-};
 
-  const { data, error } = await sb
+  const main = main_category.value;
+  const mid = mid_category.value;
+  const name = part_name.value;
+  const qty = Number(quantity.value);
+  const loc = location.value;
+  const noteText = note.value;
+
+  if (!main || !mid || !name || !qty || !loc) {
+    alert("필수값 누락");
+    return;
+  }
+
+  /* ① 같은 예비품이 이미 있는지 조회 */
+  const { data: existing } = await sb
     .from("spare_parts")
-    .insert([row])
-    .select()
-    .single();
+    .select("*")
+    .eq("part_name", name)
+    .eq("main_category", main)
+    .eq("mid_category", mid)
+    .maybeSingle();
 
-  if (error) return alert(error.message);
+  /* ② 있으면 수량만 증가 */
+  if (existing) {
 
-  await sb.from("spare_parts_logs").insert([{
-    part_id: data.id,
-    type: "IN",
-    quantity: row.quantity,
-    main_category: row.main_category,
-    mid_category: row.mid_category,
-    part_name: row.part_name,
-    note: row.note
-  }]);
+    const newQty = existing.quantity + qty;
+
+    await sb
+      .from("spare_parts")
+      .update({
+        quantity: newQty,
+        location: loc,
+        note: noteText
+      })
+      .eq("id", existing.id);
+
+  } else {
+
+    /* ③ 없으면 새로 생성 */
+    await sb.from("spare_parts").insert([{
+      main_category: main,
+      mid_category: mid,
+      part_name: name,
+      quantity: qty,
+      location: loc,
+      note: noteText
+    }]);
+  }
 
   alert("입고 완료");
   loadParts();
