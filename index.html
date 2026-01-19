@@ -280,23 +280,26 @@ async function loadParts() {
 }
 
 /* 입고 */
+<!-- 입고 부분만 관련된 JS가 수정된 안정 버전 -->
+<script>
 async function savePart() {
 
-  const main = document.getElementById("main_category")?.value;
-  const mid = document.getElementById("mid_category")?.value;
-  const name = document.getElementById("part_name")?.value;
-  const qty = Number(document.getElementById("quantity")?.value);
-  const loc = document.getElementById("location")?.value;
-  const noteText = document.getElementById("note")?.value;
+  const main = document.getElementById("main_category").value.trim();
+  const mid = document.getElementById("mid_category").value.trim();
+  const name = document.getElementById("part_name").value.trim();
+  const qty = Number(document.getElementById("quantity").value);
+  const loc = document.getElementById("location").value.trim();
+  const noteText = document.getElementById("note").value.trim();
 
-  if (!main || !mid || !name || qty <= 0 || !loc) {
+  if (main === "" || mid === "" || name === "" || loc === "" || isNaN(qty) || qty <= 0) {
     alert("필수값 누락");
     return;
   }
 
+  /* 기존 재고 검색 */
   const { data: existing } = await sb
     .from("spare_parts")
-    .select("*")
+    .select("id, quantity")
     .eq("part_name", name)
     .eq("main_category", main)
     .eq("mid_category", mid)
@@ -326,6 +329,8 @@ async function savePart() {
   loadParts();
   loadOutParts();
 }
+</script>
+
 
 
 
