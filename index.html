@@ -280,68 +280,53 @@ async function loadParts() {
 }
 
 /* 입고 */
-/* 입고 저장 함수 (초보자용 안전 버전) */
 async function savePart() {
-  // 1. 입력값 가져오기 (trim()을 써서 앞뒤 불필요한 공백을 제거합니다)
   const mCat = main_category.value;
   const sCat = mid_category.value;
-  const pName = part_name.value.trim(); 
+  const pName = part_name.value.trim();
   const qty = Number(quantity.value);
-  const loc = storage_location.value.trim();
-  const memo = note.value.trim();
+  const loc = storage_location.value;
+  const memo = note.value;
 
   if (!pName || qty <= 0) {
-    alert("품목명과 수량을 정확히 입력해주세요.");
+    alert("품목명과 수량을 정확히 입력하세요.");
     return;
   }
 
-  // 2. DB에서 똑같은 물건이 있는지 '검색' 먼저 하기
-  // 대분류, 중분류, 이름이 모두 똑같은 행이 있는지 찾아봅니다.
-
-const { data: existingItem, error: searchError } = await sb
-  .from("spare_parts")
-  .select("*")
-  .eq("main_category", mCat)
-  .eq("mid_category", sCat)
-  .eq("part_name", pName)
-  .maybeSingle();
-
-// 아래 두 줄을 추가해서 알림창을 확인해보세요
-if (!existingItem) {
-  alert("시스템: 기존에 똑같은 물건을 못 찾았습니다. 새로 만듭니다.");
-} else {
-  alert("시스템: 기존 물건을 찾았습니다! ID: " + existingItem.id + " 수량: " + existingItem.quantity);
-}
+  // [중요] 1. 먼저 똑같은 물건이 있는지 '진짜로' 찾아봅니다.
+  // 검색 조건을 조금 더 단순하게 해서 찾아볼게요.
+  const { data: foundItems, error: searchError } = await sb
+    .from("spare_parts")
+    .select("*")
+    .eq("part_name", pName)
+    .eq("main_category", mCat);
 
   if (searchError) {
-    console.error("검색 오류:", searchError);
-    return;
+    console.error("검색 중 에러 발생:", searchError);
   }
 
-  let finalPartId;
+  // 검색 결과가 있다면 첫 번째 항목을 가져옵니다.
+  const existingItem = foundItems && foundItems.length > 0 ? foundItems[0] : null;
+
+  let targetId;
 
   if (existingItem) {
-    // [경우 A] 이미 물건이 있다면? 수량을 더해줍니다.
-    const newTotalQty = existingItem.quantity + qty;
-    
-    const { error: updateError } = await sb
+    // [이미 있는 경우] 수량 합산 후 업데이트
+    const newQty = Number(existingItem.quantity) + qty;
+    const { error: updErr } = await sb
       .from("spare_parts")
-      .update({ 
-        quantity: newTotalQty, 
-        location: loc, 
-        note: memo 
-      })
+      .update({ quantity: newQty, location: loc, note: memo })
       .eq("id", existingItem.id);
-
-    if (updateError) {
-      alert("업데이트 실패: " + updateError.message);
+    
+    if (updErr) {
+      alert("업데이트 실패: " + updErr.message);
       return;
     }
-    finalPartId = existingItem.id;
-    console.log("기존 항목에 합산 완료");
+    targetId = existingItem.id;
+    console.log("기존 항목에 합산됨");
   } else {
-    // [경우 B] 똑같은 물건이 없다면? 새로 한 줄 만듭니다.
-    const { data: newItem, error: insertError } = await sb
+    // [처음 등록하는 경우] 신규 추가
+    const { data: newItem, error: insErr } = await sb
       .from("spare_parts")
       .insert([{
         main_category: mCat,
@@ -354,17 +339,17 @@ if (!existingItem) {
       .select()
       .single();
 
-    if (insertError) {
-      alert("신규 등록 실패: " + insertError.message);
+    if (insErr) {
+      alert("신규 등록 실패: " + insErr.message);
       return;
     }
-    finalPartId = newItem.id;
-    console.log("새 항목으로 등록 완료");
+    targetId = newItem.id;
+    console.log("새 항목으로 등록됨");
   }
 
-  // 3. 입고 로그 기록 (이건 합산과 상관없이 매번 기록남김)
+  // 2. 로그는 무조건 남깁니다.
   await sb.from("spare_parts_logs").insert([{
-    part_id: finalPartId,
+    part_id: targetId,
     type: "IN",
     quantity: qty,
     main_category: mCat,
@@ -373,14 +358,11 @@ if (!existingItem) {
     note: memo
   }]);
 
-  alert("처리되었습니다.");
+  alert("입고 처리가 완료되었습니다.");
   
-  // 입력창 청소
+  // 입력창 초기화 및 목록 새로고침
   part_name.value = "";
   quantity.value = "";
-  note.value = "";
-  
-  // 목록 새로고침
   loadParts();
   loadOutParts();
   loadAllLogs();
