@@ -289,7 +289,8 @@ async function savePart() {
   const loc = location.value;
   const noteText = note.value;
 
-  if (!main || !mid || !name || !qty || !loc) {
+  if (!main || !mid || !name || qty <= 0 || !loc) {
+
     alert("필수값 누락");
     return;
   }
