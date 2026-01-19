@@ -6,173 +6,104 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  
+  <style>
+    /* 1. 전체 레이아웃 */
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f7fb;
+      padding: 20px;
+      color: #111827;
+      line-height: 1.5;
+    }
 
-<style>
-/* 전체 */
-body {
-  font-family: "Segoe UI", Arial, sans-serif;
-  background: #f5f7fb;
-  padding: 20px;
-  color: #111827;
-}
+    /* 2. 헤더 영역 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+    .header .title h2 { margin: 0; font-size: 22px; }
+    .header .title span { font-size: 13px; color: #6b7280; }
+    .company img { height: 60px; }
 
-/* 제목 */
-h2 {
-  margin-bottom: 10px;
-}
-h3 {
-  margin-top: 30px;
-  border-left: 5px solid #2563eb;
-  padding-left: 10px;
-}
-
-/* 입력 영역 */
-input, select {
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  margin: 5px;
-  min-width: 150px;
-}
-
-/* 버튼 */
-button {
-  padding: 8px 14px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #1e40af;
-}
-
-/* 구분선 */
-hr {
-  border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 30px 0;
-}
-
-/* 테이블 */
-table {
-  border-collapse: collapse;
-  width: 100%;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-th {
-  background: #f3f4f6;
-  font-weight: bold;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-}
-
-/* 행 hover */
-tbody tr:hover {
-  background: #eef2ff;
-}
-
-/* 출고 강조 (나중에 쓸 용도) */
-.out {
-  color: #dc2626;
-  font-weight: bold;
-}
-
-.in {
-  color: #2563eb;
-  font-weight: bold;
-}
-
- .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 15px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
-  }
-
-  .header .title h2 {
-    margin: 0;
-    font-size: 22px;
-  }
-
-  .header .title span {
-    font-size: 13px;
-    color: #6b7280;
-  }
-
-  .company {
-    text-align: right;
-  }
-
-  .company-name {
-    font-size: 16px;
-    font-weight: bold;
-  }
-
-  .company img {
-    height: 60px;
-  }
-
-  /* 1. 테이블을 감싸는 박스 설정 */
-.table-wrapper {
-  max-height: 400px;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  position: relative; /* 고정 위치의 기준점이 됩니다 */
-}
-
-/* 2. 테이블 설정 */
-table {
-  width: 100%;
-  border-collapse: separate; /* 중요: 테두리가 겹치지 않게 해야 고정이 잘 됩니다 */
-  border-spacing: 0;
-}
-
-/* 3. 첫 행(th) 고정 설정 (엑셀의 틀 고정) */
-th {
-  position: sticky;
-  top: 0;            /* 맨 위에 고정 */
-  background: #f3f4f6; /* 배경색이 있어야 아래 데이터가 비치지 않습니다 */
-  z-index: 10;       /* 데이터보다 위에 보이게 설정 */
-  border-bottom: 2px solid #d1d5db; /* 고정된 경계선 강조 */
-  padding: 12px 10px;
-}
-
-/* 4. 테이블 셀 테두리 정리 */
-th, td {
-  border-bottom: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
-}
-
-th:last-child, td:last-child {
-  border-right: none; /* 마지막 칸은 오른쪽 테두리 제거 */
-}
-  
-    /* ===== 입·출고 색상 ===== */
-    .type-in {
-      color: blue;
+    /* 3. 입력 창 및 버튼 */
+    h3 {
+      margin-top: 30px;
+      border-left: 5px solid #2563eb;
+      padding-left: 10px;
+      margin-bottom: 15px;
+    }
+    input, select {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      margin: 5px 5px 5px 0;
+      min-width: 150px;
+    }
+    button {
+      padding: 8px 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
       font-weight: bold;
     }
-    .type-out {
-      color: red;
-      font-weight: bold;
+    button:hover { background: #1e40af; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+
+    /* 4. 핵심: 테이블 스크롤 박스 (틀 고정의 핵심) */
+    .table-wrapper {
+      max-height: 400px;    /* 표의 최대 높이 */
+      overflow-y: auto;     /* 세로 스크롤 */
+      overflow-x: auto;     /* 가로 스크롤 */
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+      position: relative;   /* 내부 sticky 요소의 기준 */
     }
+
+    table {
+      width: 100%;
+      border-collapse: separate; /* sticky가 작동하려면 separate여야 함 */
+      border-spacing: 0;         /* 간격은 0 */
+    }
+
+    /* 5. 핵심: 엑셀 틀 고정 (헤더 고정) */
+    thead th {
+      position: sticky;
+      top: 0;               /* 최상단 고정 */
+      background: #f8fafc;  /* 배경색 필수 (아래 데이터 가림용) */
+      z-index: 10;
+      font-weight: bold;
+      padding: 12px 10px;
+      border-bottom: 2px solid #cbd5e1; /* 헤더 아래쪽 선 */
+      border-right: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;  /* 제목 줄바꿈 방지 */
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      border-right: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    /* 마지막 열 선 제거 */
+    th:last-child, td:last-child { border-right: none; }
+
+    /* 행 하이라이트 */
+    tbody tr:hover { background: #f1f5f9; }
+
+    /* 입출고 색상 */
+    .type-in { color: #2563eb; font-weight: bold; }
+    .type-out { color: #dc2626; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -182,14 +113,10 @@ th:last-child, td:last-child {
     <h2>예비품 재고 관리</h2>
     <span>환경바이오 사업소</span>
   </div>
-
   <div class="company">
-    <!-- 로고 이미지가 있으면 사용 -->
     <img src="logo.jpg" alt="회사 로고">
-
   </div>
 </div>
-
 
 <input id="search" placeholder="예비품명 검색" />
 <button onclick="loadParts()">검색</button>
@@ -197,39 +124,33 @@ th:last-child, td:last-child {
 <hr />
 
 <h3>입고</h3>
-
 <select id="main_category" onchange="updateMidCategory()">
   <option value="">대분류 선택</option>
 </select>
-
 <select id="mid_category">
   <option value="">중분류 선택</option>
 </select>
-
 <input id="part_name" placeholder="예비품명" />
 <input id="quantity" type="number" placeholder="수량" />
 <input id="storage_location" placeholder="보관 위치" />
 <input id="note" placeholder="비고" />
-
 <button onclick="savePart()">입고 저장</button>
 
 <hr />
 
 <h3>출고</h3>
-
 <select id="out_part_id">
   <option value="">출고 예비품 선택</option>
 </select>
-
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_note" placeholder="비고" />
-
 <button onclick="outPart()">출고 처리</button>
 
 <hr />
 
 <h3>현재 재고</h3>
-<div class="table-wrapper"> <table>
+<div class="table-wrapper">
+  <table>
     <thead>
       <tr>
         <th>대분류</th>
@@ -244,8 +165,11 @@ th:last-child, td:last-child {
   </table>
 </div>
 
+<hr />
+
 <h3>입·출고 통합 이력</h3>
-<div class="table-wrapper"> <table>
+<div class="table-wrapper">
+  <table>
     <thead>
       <tr>
         <th>일시</th>
@@ -261,32 +185,29 @@ th:last-child, td:last-child {
   </table>
 </div>
 
-  
 <script>
-/* ===== Supabase ===== */
+/* ===== Supabase 연결 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ===== 분류 ===== */
+/* ===== 분류 데이터 ===== */
 const CATEGORIES = {
   "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
-    "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
-    "소화가스이용설비": ["가스정제설비", "제습장치", "워터트랩", "공급가스이송블로워", "가스압축기", "부취제 설비", "냉각설비", "냉각수 순환펌프", "소화가스 완충탱크", "소화가스 저장탱크", "보일러", "잉여가스연소기", "승압블로워", "수요처 가스이송"],
-    "소화슬러지설비": ["슬러지저장조", "슬러지저장조 교반기", "슬러지 이송펌프", "슬러지 공급펌프", "응집반응조", "탈수기", "가압부상조", "가압순환펌프", "폴리머 설비"],
-    "폐수처리설비": ["유량조정조", "유량조정조 교반기", "유량조정조 이송펌프", "유량조정조 바이패스펌프", "UMBR조", "BFS 침전조", "처리수조", "처리수 이송펌프", "질산화조", "질산화조 송풍기", "연계처리수조", "연계처리수조 교반기", "연계처리수 이송펌프", "수충격방지설비", "스컴저장조", "스컴이송펌프", "잉여슬러지 인발펌프", "내부반송펌프", "슬러지 반송펌프", "열교환기", "냉각설비", "냉각순환펌프", "폐수약품설비", "가압부상조"],
-    "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
-    "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
+  "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
+  "소화가스이용설비": ["가스정제설비", "제습장치", "워터트랩", "공급가스이송블로워", "가스압축기", "부취제 설비", "냉각설비", "냉각수 순환펌프", "소화가스 완충탱크", "소화가스 저장탱크", "보일러", "잉여가스연소기", "승압블로워", "수요처 가스이송"],
+  "소화슬러지설비": ["슬러지저장조", "슬러지저장조 교반기", "슬러지 이송펌프", "슬러지 공급펌프", "응집반응조", "탈수기", "가압부상조", "가압순환펌프", "폴리머 설비"],
+  "폐수처리설비": ["유량조정조", "유량조정조 교반기", "유량조정조 이송펌프", "유량조정조 바이패스펌프", "UMBR조", "BFS 침전조", "처리수조", "처리수 이송펌프", "질산화조", "질산화조 송풍기", "연계처리수조", "연계처리수조 교반기", "연계처리수 이송펌프", "수충격방지설비", "스컴저장조", "스컴이송펌프", "잉여슬러지 인발펌프", "내부반송펌프", "슬러지 반송펌프", "열교환기", "냉각설비", "냉각순환펌프", "폐수약품설비", "가압부상조"],
+  "악취제거설비": ["고농도 탈취기", "고농도 탈취팬", "고농도 순환펌프", "중저농도 탈취기", "중저농도 탈취팬", "중저농도 순환펌프", "RTO 설비"],
+  "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-/* 대분류 */
 function loadMainCategory() {
   for (const k in CATEGORIES) {
     main_category.innerHTML += `<option value="${k}">${k}</option>`;
   }
 }
 
-/* 중분류 */
 function updateMidCategory() {
   mid_category.innerHTML = '<option value="">중분류 선택</option>';
   if (!main_category.value) return;
@@ -295,10 +216,11 @@ function updateMidCategory() {
   });
 }
 
-/* 재고 조회 */
+/* ===== 기능 로직 ===== */
+
 async function loadParts() {
   const keyword = search.value;
-  let q = sb.from("spare_parts").select("*").order("created_at", { ascending:false });
+  let q = sb.from("spare_parts").select("*").order("part_name", { ascending:true });
   if (keyword) q = q.ilike("part_name", `%${keyword}%`);
 
   const { data } = await q;
@@ -316,176 +238,72 @@ async function loadParts() {
   });
 }
 
-/* 입고 */
 async function savePart() {
-  // 1. 입력값 가져오기 (trim()으로 앞뒤 공백을 완전히 제거)
-  const mCat = document.getElementById("main_category").value;
-  const sCat = document.getElementById("mid_category").value;
-  const pName = document.getElementById("part_name").value.trim();
-  const qty = Number(document.getElementById("quantity").value);
-  const loc = document.getElementById("storage_location").value.trim();
-  const memo = document.getElementById("note").value.trim();
+  const mCat = main_category.value;
+  const sCat = mid_category.value;
+  const pName = part_name.value.trim();
+  const qty = Number(quantity.value);
+  const loc = storage_location.value.trim();
+  const memo = note.value.trim();
 
-  if (!pName || qty <= 0) {
-    alert("품목명과 수량을 정확히 입력하세요.");
-    return;
+  if (!pName || qty <= 0) return alert("품목명과 수량을 입력하세요.");
+
+  // 기존 품목 확인
+  const { data: found } = await sb.from("spare_parts").select("*").eq("part_name", pName).eq("main_category", mCat);
+  const existing = found && found.length > 0 ? found[0] : null;
+
+  let tid;
+  if (existing) {
+    const { error } = await sb.from("spare_parts").update({ quantity: existing.quantity + qty, location: loc, note: memo }).eq("id", existing.id);
+    if (error) return alert(error.message);
+    tid = existing.id;
+  } else {
+    const { data: newP, error } = await sb.from("spare_parts").insert([{ main_category: mCat, mid_category: sCat, part_name: pName, quantity: qty, location: loc, note: memo }]).select().single();
+    if (error) return alert(error.message);
+    tid = newP.id;
   }
 
-  // [핵심] 2. DB에서 기존 물건 찾기 (이름으로만 검색해서 더 정확하게 찾음)
-  const { data: foundItems, error: searchError } = await sb
-    .from("spare_parts")
-    .select("*")
-    .eq("part_name", pName); // 우선 이름이 똑같은게 있는지 확인
+  await sb.from("spare_parts_logs").insert([{ part_id: tid, type: "IN", quantity: qty, main_category: mCat, mid_category: sCat, part_name: pName, note: memo }]);
 
-  if (searchError) {
-    console.error("조회 에러:", searchError);
-    alert("데이터 조회 중 오류가 발생했습니다.");
-    return;
-  }
-
-  let targetId;
-
-  // 3. 검색 결과가 있다면 (기존 품목이 있다면)
-  if (foundItems && foundItems.length > 0) {
-    const existingItem = foundItems[0]; // 첫 번째로 검색된 놈을 잡음
-    const newTotalQty = Number(existingItem.quantity) + qty;
-
-    const { error: updErr } = await sb
-      .from("spare_parts")
-      .update({ 
-        quantity: newTotalQty, 
-        location: loc, // 위치는 새로 입력한 것으로 업데이트
-        note: memo 
-      })
-      .eq("id", existingItem.id);
-
-    if (updErr) {
-      alert("수량 합산 실패: " + updErr.message);
-      return;
-    }
-    targetId = existingItem.id;
-    console.log("기존 항목에 수량 합산 완료!");
-  } 
-  // 4. 검색 결과가 없다면 (진짜 처음 들어온 물건이라면)
-  else {
-    const { data: newItem, error: insErr } = await sb
-      .from("spare_parts")
-      .insert([{
-        main_category: mCat,
-        mid_category: sCat,
-        part_name: pName,
-        quantity: qty,
-        location: loc,
-        note: memo
-      }])
-      .select()
-      .single();
-
-    if (insErr) {
-      alert("신규 등록 실패: " + insErr.message);
-      return;
-    }
-    targetId = newItem.id;
-    console.log("신규 품목으로 등록 완료!");
-  }
-
-  // 5. 입·출고 로그 기록
-  await sb.from("spare_parts_logs").insert([{
-    part_id: targetId,
-    type: "IN",
-    quantity: qty,
-    main_category: mCat,
-    mid_category: sCat,
-    part_name: pName,
-    note: memo
-  }]);
-
-  alert("입고 완료!");
-  
-  // 입력창 비우기
-  document.getElementById("part_name").value = "";
-  document.getElementById("quantity").value = "";
-  
-  // 화면 새로고침
-  loadParts();
-  loadOutParts();
-  loadAllLogs();
+  alert("입고 완료");
+  part_name.value = ""; quantity.value = "";
+  loadParts(); loadOutParts(); loadAllLogs();
 }
 
-  
-/* 출고 목록 */
 async function loadOutParts() {
   out_part_id.innerHTML = '<option value="">출고 예비품 선택</option>';
-  const { data } = await sb
-    .from("spare_parts")
-    .select("id, main_category, mid_category, part_name, quantity")
-    .gt("quantity", 0);
-
+  const { data } = await sb.from("spare_parts").select("*").gt("quantity", 0).order("part_name", {ascending: true});
   data.forEach(p => {
-    out_part_id.innerHTML += `
-      <option value="${p.id}">
-        ${p.part_name} (${p.main_category}/${p.mid_category}) [재고:${p.quantity}]
-      </option>`;
+    out_part_id.innerHTML += `<option value="${p.id}">${p.part_name} (${p.main_category}) [재고:${p.quantity}]</option>`;
   });
 }
 
-/* 출고 처리 */
 async function outPart() {
   const id = Number(out_part_id.value);
   const qty = Number(out_quantity.value);
+  if (!id || qty <= 0) return alert("항목과 수량을 확인하세요.");
 
-  if (!id || qty <= 0) {
-    alert("출고 항목과 수량을 입력하세요.");
-    return;
-  }
+  const { data: stock } = await sb.from("spare_parts").select("*").eq("id", id).single();
+  if (stock.quantity < qty) return alert("재고 부족");
 
-  const { data: stock } = await sb
-    .from("spare_parts")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (stock.quantity < qty) {
-    alert("재고 부족");
-    return;
-  }
-
-  await sb.from("spare_parts")
-    .update({ quantity: stock.quantity - qty })
-    .eq("id", id);
-
-  await sb.from("spare_parts_logs").insert([{
-    part_id: id,
-    type: "OUT",
-    quantity: qty,
-    main_category: stock.main_category,
-    mid_category: stock.mid_category,
-    part_name: stock.part_name,
-    note: out_note.value
-  }]);
+  await sb.from("spare_parts").update({ quantity: stock.quantity - qty }).eq("id", id);
+  await sb.from("spare_parts_logs").insert([{ part_id: id, type: "OUT", quantity: qty, main_category: stock.main_category, mid_category: stock.mid_category, part_name: stock.part_name, note: out_note.value }]);
 
   alert("출고 완료");
-  loadParts();
-  loadOutParts();
-  loadAllLogs();
+  out_quantity.value = "";
+  loadParts(); loadOutParts(); loadAllLogs();
 }
 
-/* 입·출고 통합 이력 */
 async function loadAllLogs() {
-  const { data } = await sb
-    .from("spare_parts_logs")
-    .select("*")
-    .order("created_at", { ascending:false });
-
+  const { data } = await sb.from("spare_parts_logs").select("*").order("created_at", { ascending: false });
   all_log_list.innerHTML = "";
   data.forEach(l => {
-    const typeClass = l.type === "IN" ? "type-in" : "type-out";
-    const typeText = l.type === "IN" ? "입고" : "출고";
-
+    const tClass = l.type === "IN" ? "type-in" : "type-out";
+    const tText = l.type === "IN" ? "입고" : "출고";
     all_log_list.innerHTML += `
       <tr>
         <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td class="${typeClass}">${typeText}</td>
+        <td class="${tClass}">${tText}</td>
         <td>${l.main_category}</td>
         <td>${l.mid_category}</td>
         <td>${l.part_name}</td>
@@ -495,12 +313,7 @@ async function loadAllLogs() {
   });
 }
 
-/* 최초 실행 */
-loadMainCategory();
-loadParts();
-loadOutParts();
-loadAllLogs();
+loadMainCategory(); loadParts(); loadOutParts(); loadAllLogs();
 </script>
-
 </body>
 </html>
