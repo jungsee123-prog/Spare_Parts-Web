@@ -170,12 +170,10 @@ tbody tr:hover {
   <option value="">중분류 선택</option>
 </select>
 
-<input id="main_category" placeholder="대분류">
-<input id="mid_category" placeholder="중분류">
-<input id="part_name" placeholder="예비품명">
-<input id="quantity" type="number" placeholder="수량">
-<input id="location" placeholder="보관위치">
-<input id="note" placeholder="비고">
+<input id="part_name" placeholder="예비품명" />
+<input id="quantity" type="number" placeholder="수량" />
+<input id="storage_location" placeholder="보관 위치" />
+<input id="note" placeholder="비고" />
 
 <button onclick="savePart()">입고 저장</button>
 
@@ -282,69 +280,82 @@ async function loadParts() {
 }
 
 /* 입고 */
-<!-- 입고 부분만 관련된 JS가 수정된 안정 버전 -->
-
+/* 입고 처리 (중복 합산 로직 추가) */
 async function savePart() {
+  const row = {
+    main_category: main_category.value,
+    mid_category: mid_category.value,
+    part_name: part_name.value,
+    quantity: Number(quantity.value),
+    location: storage_location.value,
+    note: note.value
+  };
 
-  const mainEl = document.getElementById("main_category");
-  const midEl = document.getElementById("mid_category");
-  const nameEl = document.getElementById("part_name");
-  const qtyEl = document.getElementById("quantity");
-  const locEl = document.getElementById("location");
-  const noteEl = document.getElementById("note");
-
-  if (!mainEl || !midEl || !nameEl || !qtyEl || !locEl || !noteEl) {
-    alert("HTML id가 코드와 맞지 않습니다.");
+  if (!row.part_name || row.quantity <= 0) {
+    alert("품목명과 수량을 정확히 입력하세요.");
     return;
   }
 
-  const main = mainEl.value.trim();
-  const mid = midEl.value.trim();
-  const name = nameEl.value.trim();
-  const qty = Number(qtyEl.value);
-  const loc = locEl.value.trim();
-  const noteText = noteEl.value.trim();
-
-  if (!main || !mid || !name || !loc || isNaN(qty) || qty <= 0) {
-    alert("필수값 누락");
-    return;
-  }
-
-  const { data: existing } = await sb
+  // 1. 기존에 동일한 품목(대분류+중분류+품목명)이 있는지 확인
+  const { data: existingPart, error: searchError } = await sb
     .from("spare_parts")
-    .select("id, quantity")
-    .eq("main_category", main)
-    .eq("mid_category", mid)
-    .eq("part_name", name)
-    .maybeSingle();
+    .select("*")
+    .eq("main_category", row.main_category)
+    .eq("mid_category", row.mid_category)
+    .eq("part_name", row.part_name)
+    .maybeSingle(); // 결과가 없어도 에러를 내지 않음
 
-  if (existing) {
-    await sb.from("spare_parts")
-      .update({
-        quantity: existing.quantity + qty,
-        location: loc,
-        note: noteText
+  let targetId;
+  let finalQty = row.quantity;
+
+  if (existingPart) {
+    // 2-1. 이미 있다면: 수량 합산 후 업데이트
+    targetId = existingPart.id;
+    finalQty = existingPart.quantity + row.quantity;
+    
+    const { error: updateError } = await sb
+      .from("spare_parts")
+      .update({ 
+        quantity: finalQty,
+        location: row.location, // 위치나 비고는 최신 데이터로 갱신
+        note: row.note 
       })
-      .eq("id", existing.id);
+      .eq("id", targetId);
+
+    if (updateError) return alert("수량 업데이트 실패: " + updateError.message);
   } else {
-    await sb.from("spare_parts").insert([{
-      main_category: main,
-      mid_category: mid,
-      part_name: name,
-      quantity: qty,
-      location: loc,
-      note: noteText
-    }]);
+    // 2-2. 없다면: 신규 insert
+    const { data: newData, error: insertError } = await sb
+      .from("spare_parts")
+      .insert([row])
+      .select()
+      .single();
+
+    if (insertError) return alert("신규 등록 실패: " + insertError.message);
+    targetId = newData.id;
   }
 
-  alert("입고 완료");
+  // 3. 로그 기록 (입고된 만큼만 기록)
+  await sb.from("spare_parts_logs").insert([{
+    part_id: targetId,
+    type: "IN",
+    quantity: row.quantity, // 합산 수량이 아닌 '이번에 들어온 수량'만 기록
+    main_category: row.main_category,
+    mid_category: row.mid_category,
+    part_name: row.part_name,
+    note: row.note
+  }]);
+
+  alert("입고 완료 (재고 반영됨)");
+  
+  // 입력창 초기화
+  quantity.value = "";
+  note.value = "";
+  
   loadParts();
   loadOutParts();
+  loadAllLogs();
 }
-
-
-
-
 
 /* 출고 목록 */
 async function loadOutParts() {
