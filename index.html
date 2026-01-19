@@ -297,13 +297,21 @@ async function savePart() {
 
   // 2. DB에서 똑같은 물건이 있는지 '검색' 먼저 하기
   // 대분류, 중분류, 이름이 모두 똑같은 행이 있는지 찾아봅니다.
-  const { data: existingItem, error: searchError } = await sb
-    .from("spare_parts")
-    .select("*")
-    .eq("main_category", mCat)
-    .eq("mid_category", sCat)
-    .eq("part_name", pName)
-    .maybeSingle(); // 1개만 있거나 없거나
+
+const { data: existingItem, error: searchError } = await sb
+  .from("spare_parts")
+  .select("*")
+  .eq("main_category", mCat)
+  .eq("mid_category", sCat)
+  .eq("part_name", pName)
+  .maybeSingle();
+
+// 아래 두 줄을 추가해서 알림창을 확인해보세요
+if (!existingItem) {
+  alert("시스템: 기존에 똑같은 물건을 못 찾았습니다. 새로 만듭니다.");
+} else {
+  alert("시스템: 기존 물건을 찾았습니다! ID: " + existingItem.id + " 수량: " + existingItem.quantity);
+}
 
   if (searchError) {
     console.error("검색 오류:", searchError);
