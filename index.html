@@ -127,6 +127,29 @@ tbody tr:hover {
   .company img {
     height: 60px;
   }
+
+  /* 테이블을 감싸는 박스에 스크롤 만들기 */
+.table-wrapper {
+  max-height: 400px;    /* 표의 최대 높이 (이 높이를 넘으면 스크롤이 생김) */
+  overflow-y: auto;     /* 세로 스크롤 활성화 */
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  margin-top: 10px;
+}
+
+/* 테이블 헤더(제목줄) 고정 */
+.table-wrapper th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f3f4f6;  /* 스크롤 내려도 제목줄 배경색 유지 */
+}
+
+/* 기존 table 태그의 마진 삭제 (감싸는 박스가 대신 여백을 가짐) */
+table {
+  margin-top: 0 !important;
+}
   
     /* ===== 입·출고 색상 ===== */
     .type-in {
@@ -193,38 +216,41 @@ tbody tr:hover {
 <hr />
 
 <h3>현재 재고</h3>
-<table>
-  <thead>
-    <tr>
-      <th>대분류</th>
-      <th>중분류</th>
-      <th>예비품명</th>
-      <th>수량</th>
-      <th>보관위치</th>
-      <th>비고</th>
-    </tr>
-  </thead>
-  <tbody id="list"></tbody>
-</table>
+<div class="table-wrapper"> <table>
+    <thead>
+      <tr>
+        <th>대분류</th>
+        <th>중분류</th>
+        <th>예비품명</th>
+        <th>수량</th>
+        <th>보관위치</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody id="list"></tbody>
+  </table>
+</div> ```
 
-<hr />
-
+**[입·출고 통합 이력 부분 수정]**
+```html
 <h3>입·출고 통합 이력</h3>
-<table>
-  <thead>
-    <tr>
-      <th>일시</th>
-      <th>구분</th>
-      <th>대분류</th>
-      <th>중분류</th>
-      <th>예비품명</th>
-      <th>수량</th>
-      <th>비고</th>
-    </tr>
-  </thead>
-  <tbody id="all_log_list"></tbody>
-</table>
+<div class="table-wrapper"> <table>
+    <thead>
+      <tr>
+        <th>일시</th>
+        <th>구분</th>
+        <th>대분류</th>
+        <th>중분류</th>
+        <th>예비품명</th>
+        <th>수량</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody id="all_log_list"></tbody>
+  </table>
+</div>
 
+  
 <script>
 /* ===== Supabase ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
