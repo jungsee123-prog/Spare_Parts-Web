@@ -281,94 +281,39 @@ async function loadParts() {
 
 /* 입고 */
 async function savePart() {
-  const mCat = main_category.value;
-  const sCat = mid_category.value;
-  const pName = part_name.value.trim();
-  const qty = Number(quantity.value);
-  const loc = storage_location.value;
-  const memo = note.value;
+  const row = {
+  main_category: main_category.value,
+  mid_category: mid_category.value,
+  part_name: part_name.value,
+  quantity: Number(quantity.value),
+  location: storage_location.value, // 
+  note: note.value
+};
 
-  if (!pName || qty <= 0) {
-    alert("품목명과 수량을 정확히 입력하세요.");
-    return;
-  }
-
-  // [중요] 1. 먼저 똑같은 물건이 있는지 '진짜로' 찾아봅니다.
-  // 검색 조건을 조금 더 단순하게 해서 찾아볼게요.
-  const { data: foundItems, error: searchError } = await sb
+  const { data, error } = await sb
     .from("spare_parts")
-    .select("*")
-    .eq("part_name", pName)
-    .eq("main_category", mCat);
+    .insert([row])
+    .select()
+    .single();
 
-  if (searchError) {
-    console.error("검색 중 에러 발생:", searchError);
-  }
+  if (error) return alert(error.message);
 
-  // 검색 결과가 있다면 첫 번째 항목을 가져옵니다.
-  const existingItem = foundItems && foundItems.length > 0 ? foundItems[0] : null;
-
-  let targetId;
-
-  if (existingItem) {
-    // [이미 있는 경우] 수량 합산 후 업데이트
-    const newQty = Number(existingItem.quantity) + qty;
-    const { error: updErr } = await sb
-      .from("spare_parts")
-      .update({ quantity: newQty, location: loc, note: memo })
-      .eq("id", existingItem.id);
-    
-    if (updErr) {
-      alert("업데이트 실패: " + updErr.message);
-      return;
-    }
-    targetId = existingItem.id;
-    console.log("기존 항목에 합산됨");
-  } else {
-    // [처음 등록하는 경우] 신규 추가
-    const { data: newItem, error: insErr } = await sb
-      .from("spare_parts")
-      .insert([{
-        main_category: mCat,
-        mid_category: sCat,
-        part_name: pName,
-        quantity: qty,
-        location: loc,
-        note: memo
-      }])
-      .select()
-      .single();
-
-    if (insErr) {
-      alert("신규 등록 실패: " + insErr.message);
-      return;
-    }
-    targetId = newItem.id;
-    console.log("새 항목으로 등록됨");
-  }
-
-  // 2. 로그는 무조건 남깁니다.
   await sb.from("spare_parts_logs").insert([{
-    part_id: targetId,
+    part_id: data.id,
     type: "IN",
-    quantity: qty,
-    main_category: mCat,
-    mid_category: sCat,
-    part_name: pName,
-    note: memo
+    quantity: row.quantity,
+    main_category: row.main_category,
+    mid_category: row.mid_category,
+    part_name: row.part_name,
+    note: row.note
   }]);
 
-  alert("입고 처리가 완료되었습니다.");
-  
-  // 입력창 초기화 및 목록 새로고침
-  part_name.value = "";
-  quantity.value = "";
+  alert("입고 완료");
   loadParts();
   loadOutParts();
   loadAllLogs();
 }
 
-  
 /* 출고 목록 */
 async function loadOutParts() {
   out_part_id.innerHTML = '<option value="">출고 예비품 선택</option>';
