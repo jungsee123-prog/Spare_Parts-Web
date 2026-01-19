@@ -282,12 +282,12 @@ async function loadParts() {
 /* 입고 */
 async function savePart() {
 
-  const main = document.getElementById("main_category").value;
-  const mid = document.getElementById("mid_category").value;
-  const name = document.getElementById("part_name").value;
-  const qty = Number(document.getElementById("quantity").value);
-  const loc = document.getElementById("location").value;
-  const noteText = document.getElementById("note").value;
+  const main = document.getElementById("main_category")?.value;
+  const mid = document.getElementById("mid_category")?.value;
+  const name = document.getElementById("part_name")?.value;
+  const qty = Number(document.getElementById("quantity")?.value);
+  const loc = document.getElementById("location")?.value;
+  const noteText = document.getElementById("note")?.value;
 
   if (!main || !mid || !name || qty <= 0 || !loc) {
     alert("필수값 누락");
@@ -303,7 +303,6 @@ async function savePart() {
     .maybeSingle();
 
   if (existing) {
-
     await sb
       .from("spare_parts")
       .update({
@@ -312,9 +311,7 @@ async function savePart() {
         note: noteText
       })
       .eq("id", existing.id);
-
   } else {
-
     await sb.from("spare_parts").insert([{
       main_category: main,
       mid_category: mid,
@@ -329,6 +326,7 @@ async function savePart() {
   loadParts();
   loadOutParts();
 }
+
 
 
 /* 출고 목록 */
