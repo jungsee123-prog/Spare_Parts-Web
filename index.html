@@ -170,10 +170,12 @@ tbody tr:hover {
   <option value="">중분류 선택</option>
 </select>
 
-<input id="part_name" placeholder="예비품명" />
-<input id="quantity" type="number" placeholder="수량" />
-<input id="storage_location" placeholder="보관 위치" />
-<input id="note" placeholder="비고" />
+<input id="main_category" placeholder="대분류">
+<input id="mid_category" placeholder="중분류">
+<input id="part_name" placeholder="예비품명">
+<input id="quantity" type="number" placeholder="수량">
+<input id="location" placeholder="보관위치">
+<input id="note" placeholder="비고">
 
 <button onclick="savePart()">입고 저장</button>
 
@@ -281,32 +283,43 @@ async function loadParts() {
 
 /* 입고 */
 <!-- 입고 부분만 관련된 JS가 수정된 안정 버전 -->
+
 async function savePart() {
 
-  const main = document.getElementById("main_category").value.trim();
-  const mid = document.getElementById("mid_category").value.trim();
-  const name = document.getElementById("part_name").value.trim();
-  const qty = Number(document.getElementById("quantity").value);
-  const loc = document.getElementById("location").value.trim();
-  const noteText = document.getElementById("note").value.trim();
+  const mainEl = document.getElementById("main_category");
+  const midEl = document.getElementById("mid_category");
+  const nameEl = document.getElementById("part_name");
+  const qtyEl = document.getElementById("quantity");
+  const locEl = document.getElementById("location");
+  const noteEl = document.getElementById("note");
 
-  if (main === "" || mid === "" || name === "" || loc === "" || isNaN(qty) || qty <= 0) {
+  if (!mainEl || !midEl || !nameEl || !qtyEl || !locEl || !noteEl) {
+    alert("HTML id가 코드와 맞지 않습니다.");
+    return;
+  }
+
+  const main = mainEl.value.trim();
+  const mid = midEl.value.trim();
+  const name = nameEl.value.trim();
+  const qty = Number(qtyEl.value);
+  const loc = locEl.value.trim();
+  const noteText = noteEl.value.trim();
+
+  if (!main || !mid || !name || !loc || isNaN(qty) || qty <= 0) {
     alert("필수값 누락");
     return;
   }
 
-  /* 기존 재고 검색 */
   const { data: existing } = await sb
     .from("spare_parts")
     .select("id, quantity")
-    .eq("part_name", name)
     .eq("main_category", main)
     .eq("mid_category", mid)
+    .eq("part_name", name)
     .maybeSingle();
 
   if (existing) {
-    await sb
-      .from("spare_parts")
+    await sb.from("spare_parts")
       .update({
         quantity: existing.quantity + qty,
         location: loc,
@@ -328,6 +341,7 @@ async function savePart() {
   loadParts();
   loadOutParts();
 }
+
 
 
 
