@@ -204,6 +204,13 @@ thead th:hover {
 <hr />
 
 <h3>입·출고 통합 이력</h3>
+<div style="margin-bottom: 10px;">
+  <input type="date" id="start_date" /> ~ 
+  <input type="date" id="end_date" />
+  <button onclick="loadAllLogs()">필터 적용</button>
+  <button onclick="resetLogFilter()" style="background:#6b7280;">초기화</button>
+</div>
+
 <div class="table-wrapper">
   <table>
     <thead>
@@ -221,6 +228,7 @@ thead th:hover {
   </table>
 </div>
 
+  
 <script>
 /* ===== Supabase 연결 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
@@ -335,13 +343,39 @@ async function outPart() {
   loadParts(); loadOutParts(); loadAllLogs();
 }
 
+/* 입·출고 통합 이력 조회 (날짜 필터 기능 포함) */
 async function loadAllLogs() {
-  const { data } = await sb.from("spare_parts_logs").select("*").order("created_at", { ascending: false });
-  all_log_list.innerHTML = "";
+  const startDate = document.getElementById("start_date").value;
+  const endDate = document.getElementById("end_date").value;
+
+  let q = sb.from("spare_parts_logs").select("*").order("created_at", { ascending: false });
+
+  // 시작일이 입력된 경우
+  if (startDate) {
+    // 시작일의 00시 00분 00초부터
+    q = q.gte("created_at", startDate + "T00:00:00");
+  }
+
+  // 종료일이 입력된 경우
+  if (endDate) {
+    // 종료일의 23시 59분 59초까지
+    q = q.lte("created_at", endDate + "T23:59:59");
+  }
+
+  const { data, error } = await q;
+
+  if (error) {
+    console.error("로그 조회 에러:", error);
+    return;
+  }
+
+  const logList = document.getElementById("all_log_list");
+  logList.innerHTML = "";
+  
   data.forEach(l => {
     const tClass = l.type === "IN" ? "type-in" : "type-out";
     const tText = l.type === "IN" ? "입고" : "출고";
-    all_log_list.innerHTML += `
+    logList.innerHTML += `
       <tr>
         <td>${new Date(l.created_at).toLocaleString()}</td>
         <td class="${tClass}">${tText}</td>
@@ -354,6 +388,13 @@ async function loadAllLogs() {
   });
 }
 
+/* 필터 초기화 함수 */
+function resetLogFilter() {
+  document.getElementById("start_date").value = "";
+  document.getElementById("end_date").value = "";
+  loadAllLogs(); // 전체 다시 불러오기
+}
+  
 /* 테이블 정렬 함수 */
 function sortTable(tableId, colIdx, isNumber = false) {
   const table = document.getElementById(tableId);
