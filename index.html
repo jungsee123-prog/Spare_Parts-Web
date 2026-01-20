@@ -477,8 +477,8 @@ async function downloadExcel(tableBodyId, fileName) {
 
   // 3. 열 너비 설정
   worksheet.columns = tableBodyId === 'list' 
-    ? [{width:15}, {width:20}, {width:30}, {width:10}, {width:20}, {width:30}]
-    : [{width:25}, {width:10}, {width:15}, {width:20}, {width:30}, {width:10}, {width:30}];
+    ? [{width:20}, {width:20}, {width:30}, {width:10}, {width:20}, {width:30}]
+    : [{width:25}, {width:10}, {width:20}, {width:20}, {width:30}, {width:10}, {width:30}];
 
   // 4. 파일 저장
   const buffer = await workbook.xlsx.writeBuffer();
