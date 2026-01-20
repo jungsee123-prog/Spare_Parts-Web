@@ -443,20 +443,44 @@ document.getElementById("search").addEventListener("keypress", function(e) {
   }
 });
 
-/* 테이블 데이터를 엑셀로 변환하여 다운로드 */
+/* 테이블 데이터를 엑셀로 변환하여 다운로드 (열 너비 수정 버전) */
 function downloadExcel(tableBodyId, fileName) {
   // 1. 테이블 요소 가져오기
   const table = document.getElementById(tableBodyId).closest('table');
   
-  // 2. 엑셀 워크북 생성
-  const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1", raw: true });
+  // 2. 워크시트 생성
+  const ws = XLSX.utils.table_to_sheet(table);
   
-  // 3. 오늘 날짜 구하기 (파일명 뒤에 붙이기용)
+  // 3. 열 너비(Width) 설정 (단위: 문자 개수 기준)
+  if (tableBodyId === 'list') {
+    ws['!cols'] = [
+      { wch: 20 }, // 대분류
+      { wch: 20 }, // 중분류
+      { wch: 15 }, // 예비품명
+      { wch: 5 }, // 수량
+      { wch: 20 }, // 보관위치
+      { wch: 20 }  // 비고
+    ];
+  } else {
+    ws['!cols'] = [
+      { wch: 25 }, // 일시
+      { wch: 10 }, // 구분
+      { wch: 20 }, // 대분류
+      { wch: 20 }, // 중분류
+      { wch: 15 }, // 예비품명
+      { wch: 5 }, // 수량
+      { wch: 20 }  // 비고
+    ];
+  }
+
+  // 4. 워크북 생성 및 시트 추가
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  
+  // 5. 오늘 날짜 구하기 및 다운로드
   const today = new Date().toISOString().slice(0, 10);
-  
-  // 4. 파일 다운로드 실행
   XLSX.writeFile(wb, `${fileName}_${today}.xlsx`);
-}  
+}
 
 /* 5. 페이지 시작 시 실행 */
 loadMainCategory(); 
