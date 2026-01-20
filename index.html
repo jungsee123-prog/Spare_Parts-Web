@@ -154,11 +154,6 @@ thead th:hover {
   </div>
 </div>
 
-<input id="search" placeholder="예비품명 검색" />
-<button onclick="loadParts()">검색</button>
-
-<hr />
-
 <h3>입고</h3>
 <select id="main_category" onchange="updateMidCategory()">
   <option value="">대분류 선택</option>
@@ -185,6 +180,14 @@ thead th:hover {
 <hr />
 
 <h3>현재 재고</h3>
+<div style="margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb;">
+  <input id="search" placeholder="예비품명으로 재고 검색..." style="margin: 0; width: 250px;" />
+  <button onclick="loadParts()" style="background: #0f172a;">조회</button>
+  <button onclick="resetSearch()" style="background: #6b7280;">초기화</button>
+</div>
+
+<div class="table-wrapper">
+  
 <div class="table-wrapper">
   <table>
     <thead>
