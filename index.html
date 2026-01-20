@@ -59,7 +59,7 @@
 
     /* 4. 핵심: 테이블 스크롤 박스 (틀 고정의 핵심) */
     .table-wrapper {
-      max-height: 400px;    /* 표의 최대 높이 */
+      max-height: 600px;    /* 표의 최대 높이 */
       overflow-y: auto;     /* 세로 스크롤 */
       overflow-x: auto;     /* 가로 스크롤 */
       border: 1px solid #e5e7eb;
@@ -95,6 +95,17 @@
       text-align: left;
     }
 
+     /* 재고 부족(5개 미만 예시) 시 행 색상 */
+  .low-stock {
+  background-color: #fef08a !important; /* 부드러운 노란색 */
+    }
+
+    /* 마우스를 올렸을 때도 노란색이 유지되도록 설정 */
+   tbody tr.low-stock:hover {
+   background-color: #fde047 !important;
+    }
+
+    
     /* 마지막 열 선 제거 */
     th:last-child, td:last-child { border-right: none; }
 
@@ -225,9 +236,13 @@ async function loadParts() {
 
   const { data } = await q;
   list.innerHTML = "";
+  
   data.forEach(r => {
+    // [중요] 재고가 1개 미만이면 'low-stock'이라는 이름을 붙여줍니다.
+    const lowStockClass = r.quantity < 1 ? "low-stock" : "";
+
     list.innerHTML += `
-      <tr>
+      <tr class="${lowStockClass}">
         <td>${r.main_category}</td>
         <td>${r.mid_category}</td>
         <td>${r.part_name}</td>
@@ -238,6 +253,7 @@ async function loadParts() {
   });
 }
 
+  
 async function savePart() {
   const mCat = main_category.value;
   const sCat = mid_category.value;
