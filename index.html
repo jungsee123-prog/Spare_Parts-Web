@@ -155,12 +155,8 @@ thead th:hover {
 </div>
 
 <h3>입고</h3>
-<select id="main_category" onchange="updateMidCategory()">
-  <option value="">대분류 선택</option>
-</select>
-<select id="mid_category">
-  <option value="">중분류 선택</option>
-</select>
+<select id="main_category" onchange="updateMidCategory()"><option value="">대분류 선택</option></select>
+<select id="mid_category"><option value="">중분류 선택</option></select>
 <input id="part_name" placeholder="예비품명" />
 <input id="quantity" type="number" placeholder="수량" />
 <input id="storage_location" placeholder="보관 위치" />
@@ -170,9 +166,7 @@ thead th:hover {
 <hr />
 
 <h3>출고</h3>
-<select id="out_part_id">
-  <option value="">출고 예비품 선택</option>
-</select>
+<select id="out_part_id"><option value="">출고 예비품 선택</option></select>
 <input id="out_quantity" type="number" placeholder="출고 수량" />
 <input id="out_note" placeholder="비고" />
 <button onclick="outPart()">출고 처리</button>
@@ -185,10 +179,7 @@ thead th:hover {
   <button onclick="loadParts()">조회</button>
   <button onclick="resetSearch()" style="background: #6b7280;">초기화</button>
 </div>
-<div class="table-wrapper">
-  
-<div class="table-wrapper">
-  
+
 <div class="table-wrapper">
   <table>
     <thead>
@@ -203,16 +194,14 @@ thead th:hover {
     </thead>
     <tbody id="list"></tbody>
   </table>
-</div>
-
-<hr />
+</div> <hr />
 
 <h3>입·출고 통합 이력</h3>
-<div style="margin-bottom: 10px;">
-  <input type="date" id="start_date" /> ~ 
-  <input type="date" id="end_date" />
+<div style="margin-bottom: 15px;">
+  <input type="date" id="start_date" style="margin: 0;" /> ~ 
+  <input type="date" id="end_date" style="margin: 0;" />
   <button onclick="loadAllLogs()">필터 적용</button>
-  <button onclick="resetLogFilter()" style="background:#6b7280;">초기화</button>
+  <button onclick="resetLogFilter()" style="background: #6b7280;">초기화</button>
 </div>
 
 <div class="table-wrapper">
@@ -230,8 +219,7 @@ thead th:hover {
     </thead>
     <tbody id="all_log_list"></tbody>
   </table>
-</div>
-
+</div> 
   
 <script>
 /* ===== Supabase 연결 ===== */
