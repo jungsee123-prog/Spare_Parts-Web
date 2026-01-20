@@ -113,6 +113,27 @@
     /* 마지막 열 선 제거 */
     th:last-child, td:last-child { border-right: none; }
 
+
+
+    
+/* 제목 줄 클릭 가능 표시 */
+thead th {
+  cursor: pointer;
+  user-select: none; /* 드래그 방지 */
+}
+
+thead th:hover {
+  background-color: #f1f5f9; /* 마우스 올리면 살짝 어둡게 */
+}
+
+
+
+    
+/* 정렬 화살표 표시를 위한 스타일 */
+.sort-asc::after { content: " ▲"; font-size: 10px; }
+.sort-desc::after { content: " ▼"; font-size: 10px; }
+
+    
     /* 행 하이라이트 */
     tbody tr:hover { background: #f1f5f9; }
 
@@ -168,12 +189,12 @@
   <table>
     <thead>
       <tr>
-        <th>대분류</th>
-        <th>중분류</th>
-        <th>예비품명</th>
-        <th>수량</th>
-        <th>보관위치</th>
-        <th>비고</th>
+        <th onclick="sortTable('list', 0)">대분류</th>
+        <th onclick="sortTable('list', 1)">중분류</th>
+        <th onclick="sortTable('list', 2)">예비품명</th>
+        <th onclick="sortTable('list', 3, true)">수량</th>
+        <th onclick="sortTable('list', 4)">보관위치</th>
+        <th onclick="sortTable('list', 5)">비고</th>
       </tr>
     </thead>
     <tbody id="list"></tbody>
@@ -187,13 +208,13 @@
   <table>
     <thead>
       <tr>
-        <th>일시</th>
-        <th>구분</th>
-        <th>대분류</th>
-        <th>중분류</th>
-        <th>예비품명</th>
-        <th>수량</th>
-        <th>비고</th>
+        <th onclick="sortTable('all_log_list', 0)">일시</th>
+        <th onclick="sortTable('all_log_list', 1)">구분</th>
+        <th onclick="sortTable('all_log_list', 2)">대분류</th>
+        <th onclick="sortTable('all_log_list', 3)">중분류</th>
+        <th onclick="sortTable('all_log_list', 4)">예비품명</th>
+        <th onclick="sortTable('all_log_list', 5, true)">수량</th>
+        <th onclick="sortTable('all_log_list', 6)">비고</th>
       </tr>
     </thead>
     <tbody id="all_log_list"></tbody>
@@ -333,6 +354,37 @@ async function loadAllLogs() {
   });
 }
 
+/* 테이블 정렬 함수 */
+function sortTable(tableId, colIdx, isNumber = false) {
+  const table = document.getElementById(tableId);
+  const rows = Array.from(table.querySelectorAll("tr"));
+  const isAsc = table.getAttribute("data-sort-dir") !== "asc";
+  
+  // 데이터 정렬 로직
+  rows.sort((a, b) => {
+    let valA = a.children[colIdx].innerText;
+    let valB = b.children[colIdx].innerText;
+
+    if (isNumber) {
+      return isAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+    } else {
+      return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+  });
+
+  // 정렬된 순서대로 다시 화면에 그리기
+  rows.forEach(row => table.appendChild(row));
+  
+  // 현재 정렬 방향 저장
+  table.setAttribute("data-sort-dir", isAsc ? "asc" : "desc");
+
+  // 제목 행에 화살표 표시 (선택사항)
+  const headers = table.closest('table').querySelectorAll('th');
+  headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+  headers[colIdx].classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+}
+
+  
 loadMainCategory(); loadParts(); loadOutParts(); loadAllLogs();
 </script>
 </body>
