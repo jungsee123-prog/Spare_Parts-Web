@@ -1,9 +1,158 @@
-/* ===== Supabase 연결 ===== */
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>예비품 재고 관리</title>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <style>
+    /* 1. 로그인 화면 스타일 */
+    #login-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #f8fafc; display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background: white; padding: 30px; border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 320px; text-align: center;
+    }
+    .login-box h2 { margin-bottom: 20px; color: #1e3a8a; }
+    .login-box input { width: 100%; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    .login-box button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .login-box button:hover { background: #1d4ed8; }
+
+    /* 2. 전체 레이아웃 */
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f5f7fb; padding: 20px; color: #111827; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+    .header .title h2 { margin: 0; font-size: 22px; }
+    .header .title span { font-size: 13px; color: #6b7280; }
+    .company img { height: 60px; }
+
+    /* 3. 공통 요소 */
+    h3 { margin-top: 30px; border-left: 5px solid #2563eb; padding-left: 10px; margin-bottom: 15px; }
+    input, select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; margin: 5px 5px 5px 0; min-width: 150px; }
+    button { padding: 8px 14px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1e40af; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+
+    /* 4. 테이블 스타일 */
+    .table-wrapper { max-height: 600px; overflow-y: auto; overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: white; position: relative; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    thead th { position: sticky; top: 0; background: #f8fafc; z-index: 10; font-weight: bold; padding: 12px 10px; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e5e7eb; text-align: left; white-space: nowrap; cursor: pointer; }
+    thead th:hover { background-color: #f1f5f9; }
+    td { padding: 10px; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; text-align: left; }
+    th:last-child, td:last-child { border-right: none; }
+    tbody tr:hover { background: #f1f5f9; }
+
+    /* 5. 상태 표시 */
+    .low-stock { background-color: #fffbeb !important; }
+    .low-stock td { border-bottom: 1px solid #fef3c7 !important; }
+    .type-in { color: #2563eb; font-weight: bold; }
+    .type-out { color: #dc2626; font-weight: bold; }
+    .sort-asc::after { content: " ▲"; font-size: 10px; }
+    .sort-desc::after { content: " ▼"; font-size: 10px; }
+  </style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>재고관리 로그인</h2>
+    <input type="text" id="login-id" placeholder="아이디를 입력하세요" />
+    <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요" />
+    <button onclick="checkLogin()">로그인</button>
+    <p id="login-msg" style="color: red; font-size: 13px; margin-top: 10px;"></p>
+  </div>
+</div>
+
+<div class="header">
+  <div class="title">
+    <h2>예비품 재고 관리</h2>
+    <span>환경바이오 사업소</span>
+  </div>
+  <div class="company"><img src="logo.jpg" alt="로고"></div>
+</div>
+
+<h3>입고</h3>
+<select id="main_category" onchange="updateMidCategory()"><option value="">대분류 선택</option></select>
+<select id="mid_category"><option value="">중분류 선택</option></select>
+<input id="part_name" placeholder="예비품명" />
+<input id="quantity" type="number" placeholder="수량" />
+<input id="storage_location" placeholder="보관 위치" />
+<input id="note" placeholder="비고" />
+<button onclick="savePart()">입고 저장</button>
+
+<hr />
+
+<h3>출고</h3>
+<select id="out_part_id"><option value="">출고 예비품 선택</option></select>
+<input id="out_quantity" type="number" placeholder="출고 수량" />
+<input id="out_note" placeholder="비고" />
+<button onclick="outPart()">출고 처리</button>
+
+<hr />
+
+<h3>현재 재고</h3>
+<div style="margin-bottom: 15px;">
+  <input id="search" placeholder="예비품명으로 재고 검색..." style="width: 250px;" />
+  <button onclick="loadParts()">조회</button>
+  <button onclick="resetSearch()" style="background: #6b7280;">초기화</button>
+  <button onclick="downloadExcel('list', '현재재고현황')" style="background: #16a34a; margin-left: 10px;">엑셀 저장</button>
+</div>
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortTable('list', 0)">대분류</th>
+        <th onclick="sortTable('list', 1)">중분류</th>
+        <th onclick="sortTable('list', 2)">예비품명</th>
+        <th onclick="sortTable('list', 3, true)">수량</th>
+        <th onclick="sortTable('list', 4)">보관위치</th>
+        <th onclick="sortTable('list', 5)">비고</th>
+      </tr>
+    </thead>
+    <tbody id="list"></tbody>
+  </table>
+</div>
+
+<hr />
+
+<h3>입·출고 통합 이력</h3>
+<div style="margin-bottom: 15px;">
+  <input type="date" id="start_date" /> ~ <input type="date" id="end_date" />
+  <button onclick="loadAllLogs()">필터 적용</button>
+  <button onclick="resetLogFilter()" style="background: #6b7280;">초기화</button>
+  <button onclick="downloadExcel('all_log_list', '입출고통합이력')" style="background: #16a34a; margin-left: 10px;">엑셀 저장</button>
+</div>
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortTable('all_log_list', 0)">일시</th>
+        <th onclick="sortTable('all_log_list', 1)">구분</th>
+        <th onclick="sortTable('all_log_list', 2)">대분류</th>
+        <th onclick="sortTable('all_log_list', 3)">중분류</th>
+        <th onclick="sortTable('all_log_list', 4)">예비품명</th>
+        <th onclick="sortTable('all_log_list', 5, true)">수량</th>
+        <th onclick="sortTable('all_log_list', 6)">비고</th>
+      </tr>
+    </thead>
+    <tbody id="all_log_list"></tbody>
+  </table>
+</div>
+
+<script>
+/* ===== 1. 설정 및 초기화 ===== */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ===== 분류 데이터 ===== */
+const MASTER_ID = "bio_admin";
+const MASTER_PW = "bio0213!";
+const INACTIVITY_TIME = 30 * 60 * 1000;
 const CATEGORIES = {
   "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
   "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
@@ -14,13 +163,8 @@ const CATEGORIES = {
   "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-// 우리 사업소 전용 ID/PW 설정
-const MASTER_ID = "bio_admin";
-const MASTER_PW = "bio0213!";
-const INACTIVITY_TIME = 30 * 60 * 1000; // 30분
 let logoutTimer;
 
-/* ===== 초기 로드 및 로그인 로직 ===== */
 window.onload = function() {
   const isLoggedIn = sessionStorage.getItem("isLoggedIn");
   const lastActivity = sessionStorage.getItem("lastActivity");
@@ -28,40 +172,30 @@ window.onload = function() {
 
   if (isLoggedIn === "true" && (now - lastActivity < INACTIVITY_TIME)) {
     document.getElementById("login-overlay").style.display = "none";
-    sessionStorage.setItem("lastActivity", now);
-    startInactivityMonitoring();
-    initApp(); // 데이터 로드
+    startApp();
   }
 };
-
-function initApp() {
-  loadMainCategory();
-  loadParts();
-  loadOutParts();
-  loadAllLogs();
-}
 
 function checkLogin() {
   const id = document.getElementById("login-id").value;
   const pw = document.getElementById("login-pw").value;
-  const msg = document.getElementById("login-msg");
-
   if (id === MASTER_ID && pw === MASTER_PW) {
     sessionStorage.setItem("isLoggedIn", "true");
-    sessionStorage.setItem("lastActivity", Date.now());
     document.getElementById("login-overlay").style.display = "none";
-    startInactivityMonitoring();
-    initApp();
+    startApp();
   } else {
-    msg.innerText = "아이디 또는 비밀번호가 틀렸습니다.";
+    document.getElementById("login-msg").innerText = "아이디 또는 비밀번호가 틀렸습니다.";
   }
 }
 
-function startInactivityMonitoring() {
+function startApp() {
+  loadMainCategory();
+  loadParts();
+  loadOutParts();
+  loadAllLogs();
   resetLogoutTimer();
   window.onmousemove = resetLogoutTimer;
   window.onkeypress = resetLogoutTimer;
-  window.onclick = resetLogoutTimer;
 }
 
 function resetLogoutTimer() {
@@ -72,201 +206,135 @@ function resetLogoutTimer() {
 
 function logout() {
   sessionStorage.clear();
-  alert("장시간 활동이 없어 안전을 위해 로그아웃되었습니다.");
+  alert("장시간 활동이 없어 로그아웃되었습니다.");
   location.reload();
 }
 
-/* ===== 카테고리 로직 ===== */
+/* ===== 2. 비즈니스 로직 ===== */
 function loadMainCategory() {
-  const mainCat = document.getElementById("main_category");
-  mainCat.innerHTML = '<option value="">대분류 선택</option>';
-  for (const k in CATEGORIES) {
-    mainCat.innerHTML += `<option value="${k}">${k}</option>`;
-  }
+  const sel = document.getElementById("main_category");
+  sel.innerHTML = '<option value="">대분류 선택</option>';
+  for (const k in CATEGORIES) sel.innerHTML += `<option value="${k}">${k}</option>`;
 }
 
 function updateMidCategory() {
-  const mainCat = document.getElementById("main_category").value;
-  const midCat = document.getElementById("mid_category");
-  midCat.innerHTML = '<option value="">중분류 선택</option>';
-  if (!mainCat) return;
-  CATEGORIES[mainCat].forEach(m => {
-    midCat.innerHTML += `<option value="${m}">${m}</option>`;
-  });
+  const m = document.getElementById("main_category").value;
+  const s = document.getElementById("mid_category");
+  s.innerHTML = '<option value="">중분류 선택</option>';
+  if (m) CATEGORIES[m].forEach(item => s.innerHTML += `<option value="${item}">${item}</option>`);
 }
 
-/* ===== 데이터 로드 및 조작 ===== */
 async function loadParts() {
-  const keyword = document.getElementById("search").value;
-  let q = sb.from("spare_parts").select("*").order("part_name", { ascending:true });
-  if (keyword) q = q.ilike("part_name", `%${keyword}%`);
-
+  const kw = document.getElementById("search").value;
+  let q = sb.from("spare_parts").select("*").order("part_name", { ascending: true });
+  if (kw) q = q.ilike("part_name", `%${kw}%`);
   const { data } = await q;
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-  
+  const body = document.getElementById("list");
+  body.innerHTML = "";
   data.forEach(r => {
-    const lowStockClass = r.quantity < 1 ? "low-stock" : "";
-    list.innerHTML += `
-      <tr class="${lowStockClass}">
-        <td>${r.main_category}</td>
-        <td>${r.mid_category}</td>
-        <td>${r.part_name}</td>
-        <td>${r.quantity}</td>
-        <td>${r.location}</td>
-        <td>${r.note ?? ""}</td>
-      </tr>`;
+    const cls = r.quantity < 1 ? "low-stock" : "";
+    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td>${r.note ?? ""}</td></tr>`;
   });
 }
 
 async function savePart() {
-  const mCat = document.getElementById("main_category").value;
-  const sCat = document.getElementById("mid_category").value;
-  const pName = document.getElementById("part_name").value.trim();
-  const qty = Number(document.getElementById("quantity").value);
-  const loc = document.getElementById("storage_location").value.trim();
+  const m = document.getElementById("main_category").value;
+  const s = document.getElementById("mid_category").value;
+  const n = document.getElementById("part_name").value.trim();
+  const q = Number(document.getElementById("quantity").value);
+  const l = document.getElementById("storage_location").value.trim();
   const memo = document.getElementById("note").value.trim();
 
-  if (!pName || qty <= 0) return alert("품목명과 수량을 입력하세요.");
-
-  const { data: found } = await sb.from("spare_parts").select("*").eq("part_name", pName).eq("main_category", mCat);
-  const existing = found && found.length > 0 ? found[0] : null;
+  if (!n || q <= 0) return alert("입력값을 확인하세요.");
+  const { data: found } = await sb.from("spare_parts").select("*").eq("part_name", n).eq("main_category", m);
+  const ex = found?.[0];
 
   let tid;
-  if (existing) {
-    const { error } = await sb.from("spare_parts").update({ quantity: existing.quantity + qty, location: loc, note: memo }).eq("id", existing.id);
-    if (error) return alert(error.message);
-    tid = existing.id;
+  if (ex) {
+    await sb.from("spare_parts").update({ quantity: ex.quantity + q, location: l, note: memo }).eq("id", ex.id);
+    tid = ex.id;
   } else {
-    const { data: newP, error } = await sb.from("spare_parts").insert([{ main_category: mCat, mid_category: sCat, part_name: pName, quantity: qty, location: loc, note: memo }]).select().single();
-    if (error) return alert(error.message);
+    const { data: newP } = await sb.from("spare_parts").insert([{ main_category: m, mid_category: s, part_name: n, quantity: q, location: l, note: memo }]).select().single();
     tid = newP.id;
   }
-
-  await sb.from("spare_parts_logs").insert([{ part_id: tid, type: "IN", quantity: qty, main_category: mCat, mid_category: sCat, part_name: pName, note: memo }]);
-
+  await sb.from("spare_parts_logs").insert([{ part_id: tid, type: "IN", quantity: q, main_category: m, mid_category: s, part_name: n, note: memo }]);
   alert("입고 완료");
-  document.getElementById("part_name").value = ""; 
-  document.getElementById("quantity").value = "";
-  initApp();
+  startApp();
 }
 
 async function loadOutParts() {
-  const outSelect = document.getElementById("out_part_id");
-  outSelect.innerHTML = '<option value="">출고 예비품 선택</option>';
-  const { data } = await sb.from("spare_parts").select("*").gt("quantity", 0).order("part_name", {ascending: true});
-  data.forEach(p => {
-    outSelect.innerHTML += `<option value="${p.id}">${p.part_name} (${p.main_category}) [재고:${p.quantity}]</option>`;
-  });
+  const sel = document.getElementById("out_part_id");
+  sel.innerHTML = '<option value="">출고 예비품 선택</option>';
+  const { data } = await sb.from("spare_parts").select("*").gt("quantity", 0).order("part_name", { ascending: true });
+  data?.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.part_name} (${p.main_category}) [재고:${p.quantity}]</option>`);
 }
 
 async function outPart() {
   const id = Number(document.getElementById("out_part_id").value);
-  const qty = Number(document.getElementById("out_quantity").value);
-  if (!id || qty <= 0) return alert("항목과 수량을 확인하세요.");
-
-  const { data: stock } = await sb.from("spare_parts").select("*").eq("id", id).single();
-  if (stock.quantity < qty) return alert("재고 부족");
-
-  await sb.from("spare_parts").update({ quantity: stock.quantity - qty }).eq("id", id);
-  await sb.from("spare_parts_logs").insert([{ part_id: id, type: "OUT", quantity: qty, main_category: stock.main_category, mid_category: stock.mid_category, part_name: stock.part_name, note: document.getElementById("out_note").value }]);
-
+  const q = Number(document.getElementById("out_quantity").value);
+  if (!id || q <= 0) return alert("항목과 수량을 확인하세요.");
+  const { data: st } = await sb.from("spare_parts").select("*").eq("id", id).single();
+  if (st.quantity < q) return alert("재고 부족");
+  await sb.from("spare_parts").update({ quantity: st.quantity - q }).eq("id", id);
+  await sb.from("spare_parts_logs").insert([{ part_id: id, type: "OUT", quantity: q, main_category: st.main_category, mid_category: st.mid_category, part_name: st.part_name, note: document.getElementById("out_note").value }]);
   alert("출고 완료");
-  document.getElementById("out_quantity").value = "";
-  initApp();
+  startApp();
 }
 
 async function loadAllLogs() {
-  const startDate = document.getElementById("start_date").value;
-  const endDate = document.getElementById("end_date").value;
+  const s = document.getElementById("start_date").value;
+  const e = document.getElementById("end_date").value;
   let q = sb.from("spare_parts_logs").select("*").order("created_at", { ascending: false });
-
-  if (startDate) q = q.gte("created_at", startDate + "T00:00:00");
-  if (endDate) q = q.lte("created_at", endDate + "T23:59:59");
-
-  const { data, error } = await q;
-  if (error) return;
-
-  const logList = document.getElementById("all_log_list");
-  logList.innerHTML = "";
-  
-  data.forEach(l => {
-    const tClass = l.type === "IN" ? "type-in" : "type-out";
-    const tText = l.type === "IN" ? "입고" : "출고";
-    logList.innerHTML += `
-      <tr>
-        <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td class="${tClass}">${tText}</td>
-        <td>${l.main_category}</td>
-        <td>${l.mid_category}</td>
-        <td>${l.part_name}</td>
-        <td>${l.quantity}</td>
-        <td>${l.note ?? ""}</td>
-      </tr>`;
+  if (s) q = q.gte("created_at", s + "T00:00:00");
+  if (e) q = q.lte("created_at", e + "T23:59:59");
+  const { data } = await q;
+  const body = document.getElementById("all_log_list");
+  body.innerHTML = "";
+  data?.forEach(l => {
+    const cls = l.type === "IN" ? "type-in" : "type-out";
+    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td>${l.note ?? ""}</td></tr>`;
   });
 }
 
-/* ===== 유틸리티 함수 ===== */
-function resetSearch() {
-  document.getElementById("search").value = "";
-  loadParts();
-}
+function resetSearch() { document.getElementById("search").value = ""; loadParts(); }
+function resetLogFilter() { document.getElementById("start_date").value = ""; document.getElementById("end_date").value = ""; loadAllLogs(); }
 
-function resetLogFilter() {
-  document.getElementById("start_date").value = "";
-  document.getElementById("end_date").value = "";
-  loadAllLogs();
-}
-
-function sortTable(tableId, colIdx, isNumber = false) {
-  const table = document.getElementById(tableId);
+function sortTable(id, idx, isNum = false) {
+  const table = document.getElementById(id);
   const rows = Array.from(table.querySelectorAll("tr"));
-  const isAsc = table.getAttribute("data-sort-dir") !== "asc";
-  
+  const dir = table.getAttribute("data-dir") !== "asc";
   rows.sort((a, b) => {
-    let valA = a.children[colIdx].innerText;
-    let valB = b.children[colIdx].innerText;
-    if (isNumber) return isAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
-    return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    let va = a.children[idx].innerText, vb = b.children[idx].innerText;
+    return isNum ? (dir ? va - vb : vb - va) : (dir ? va.localeCompare(vb) : vb.localeCompare(va));
   });
-
-  rows.forEach(row => table.appendChild(row));
-  table.setAttribute("data-sort-dir", isAsc ? "asc" : "desc");
-  const headers = table.closest('table').querySelectorAll('th');
-  headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
-  headers[colIdx].classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+  rows.forEach(r => table.appendChild(r));
+  table.setAttribute("data-dir", dir ? "asc" : "desc");
 }
 
-async function downloadExcel(tableBodyId, fileName) {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Sheet1');
-  const table = document.getElementById(tableBodyId).closest('table');
-  
-  const headerRow = [];
-  table.querySelectorAll('thead th').forEach(th => headerRow.push(th.innerText));
-  const sheetHeader = worksheet.addRow(headerRow);
-  
-  sheetHeader.eachCell((cell) => {
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-    cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+async function downloadExcel(bodyId, name) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Sheet1');
+  const table = document.getElementById(bodyId).closest('table');
+  const headers = [];
+  table.querySelectorAll('thead th').forEach(th => headers.push(th.innerText));
+  const row = ws.addRow(headers);
+  row.eachCell(c => {
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    c.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+    c.alignment = { horizontal: 'center' };
   });
-
-  table.querySelectorAll(`tbody#${tableBodyId} tr`).forEach(tr => {
-    const rowData = [];
-    tr.querySelectorAll('td').forEach(td => rowData.push(td.innerText));
-    worksheet.addRow(rowData);
+  table.querySelectorAll(`tbody#${bodyId} tr`).forEach(tr => {
+    const data = [];
+    tr.querySelectorAll('td').forEach(td => data.push(td.innerText));
+    ws.addRow(data);
   });
-
-  worksheet.columns = tableBodyId === 'list' 
-    ? [{width:20}, {width:20}, {width:30}, {width:10}, {width:20}, {width:30}]
-    : [{width:25}, {width:10}, {width:20}, {width:20}, {width:30}, {width:10}, {width:30}];
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const today = new Date().toISOString().slice(0, 10);
-  saveAs(new Blob([buffer]), `${fileName}_${today}.xlsx`);
+  ws.columns = bodyId === 'list' ? [{width:20},{width:20},{width:30},{width:10},{width:20},{width:30}] : [{width:25},{width:10},{width:20},{width:20},{width:30},{width:10},{width:30}];
+  const buf = await wb.xlsx.writeBuffer();
+  saveAs(new Blob([buf]), `${name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-document.getElementById("login-pw").addEventListener("keypress", (e) => { if (e.key === "Enter") checkLogin(); });
-document.getElementById("search").addEventListener("keypress", (e) => { if (e.key === "Enter") loadParts(); });
+document.getElementById("login-pw").addEventListener("keypress", e => e.key === "Enter" && checkLogin());
+document.getElementById("search").addEventListener("keypress", e => e.key === "Enter" && loadParts());
 </script>
+</body>
+</html>
