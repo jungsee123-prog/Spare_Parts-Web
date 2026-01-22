@@ -9,6 +9,22 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
+    
+/* 로그인 화면 스타일 */
+#login-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #f8fafc; display: flex; align-items: center; justify-content: center;
+  z-index: 9999; /* 모든 화면보다 위에 표시 */
+}
+.login-box {
+  background: white; padding: 30px; border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 320px; text-align: center;
+}
+.login-box h2 { margin-bottom: 20px; color: #1e3a8a; }
+.login-box input { width: 100%; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
+.login-box button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; }
+.login-box button:hover { background: #1d4ed8; }
+    
     /* 1. 전체 레이아웃 */
     body {
       font-family: "Segoe UI", Arial, sans-serif;
@@ -146,6 +162,17 @@ thead th:hover {
 </head>
 <body>
 
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>재고관리 로그인</h2>
+    <input type="text" id="login-id" placeholder="아이디를 입력하세요" />
+    <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요" />
+    <button onclick="checkLogin()">로그인</button>
+    <p id="login-msg" style="color: red; font-size: 13px; margin-top: 10px;"></p>
+  </div>
+</div>  
+
+  
 <div class="header">
   <div class="title">
     <h2>예비품 재고 관리</h2>
@@ -485,6 +512,31 @@ async function downloadExcel(tableBodyId, fileName) {
   const today = new Date().toISOString().slice(0, 10);
   saveAs(new Blob([buffer]), `${fileName}_${today}.xlsx`);
 }
+
+// 우리 사업소 전용 ID/PW 설정
+const MASTER_ID = "bio_admin";  // 사용할 아이디
+const MASTER_PW = "bio0213!"; // 사용할 비밀번호
+
+function checkLogin() {
+  const id = document.getElementById("login-id").value;
+  const pw = document.getElementById("login-pw").value;
+  const msg = document.getElementById("login-msg");
+
+  if (id === MASTER_ID && pw === MASTER_PW) {
+    // 로그인 성공 시 오버레이 삭제
+    document.getElementById("login-overlay").style.display = "none";
+    alert("환영합니다! 사업소 관리자님.");
+  } else {
+    msg.innerText = "아이디 또는 비밀번호가 틀렸습니다.";
+  }
+}
+
+// 엔터 키로도 로그인 가능하게 설정
+document.getElementById("login-pw").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") checkLogin();
+});
+
+  
 
 /* 5. 페이지 시작 시 실행 */
 loadMainCategory(); 
