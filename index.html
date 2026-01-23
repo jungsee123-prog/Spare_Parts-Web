@@ -151,7 +151,7 @@ const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const MASTER_ID = "bio_admin";
-const MASTER_PW = "bio0213!";
+const MASTER_PW = "#qkdldh123!";
 const INACTIVITY_TIME = 30 * 60 * 1000;
 const CATEGORIES = {
   "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
@@ -233,7 +233,7 @@ async function loadParts() {
   body.innerHTML = "";
   data.forEach(r => {
     const cls = r.quantity < 1 ? "low-stock" : "";
-    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td onclick="editNote(this, 'parts', ${r.id})" style="cursor: pointer; color: #2563eb;">${r.note ?? ""}</td></tr>`;
+    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td onclick="editNote(this, 'parts', ${r.id})" style="cursor: text; color: #2563eb;">${r.note ?? ""}</td></tr>`;
   });
 }
 
@@ -292,7 +292,7 @@ async function loadAllLogs() {
   body.innerHTML = "";
   data?.forEach(l => {
     const cls = l.type === "IN" ? "type-in" : "type-out";
-    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td onclick="editNote(this, 'logs', ${l.id})" style="cursor: pointer; color: #2563eb;">${l.note ?? ""}</td></tr>`;
+    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td onclick="editNote(this, 'logs', ${l.id})" style="cursor: text; color: #2563eb;">${l.note ?? ""}</td></tr>`;
   });
 }
 
