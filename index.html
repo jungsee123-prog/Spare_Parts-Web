@@ -233,7 +233,7 @@ async function loadParts() {
   body.innerHTML = "";
   data.forEach(r => {
     const cls = r.quantity < 1 ? "low-stock" : "";
-    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td>${r.note ?? ""}</td></tr>`;
+    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td onclick="editNote(this, 'parts', ${r.id})" style="cursor: pointer; color: #2563eb;">${r.note ?? ""}</td></tr>`;
   });
 }
 
@@ -292,7 +292,7 @@ async function loadAllLogs() {
   body.innerHTML = "";
   data?.forEach(l => {
     const cls = l.type === "IN" ? "type-in" : "type-out";
-    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td>${l.note ?? ""}</td></tr>`;
+    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td onclick="editNote(this, 'logs', ${l.id})" style="cursor: pointer; color: #2563eb;">${l.note ?? ""}</td></tr>`;
   });
 }
 
@@ -332,6 +332,45 @@ async function downloadExcel(bodyId, name) {
   const buf = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buf]), `${name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
+
+/* 1. 비고 셀 수정 모드 전환 */
+function editNote(cell, table, id) {
+  // 이미 수정 중이면 중단
+  if (cell.querySelector('input')) return;
+
+  const oldText = cell.innerText;
+  cell.innerHTML = `<input type="text" value="${oldText}" style="width: 90%; padding: 4px;">`;
+  const input = cell.querySelector('input');
+  input.focus();
+
+  // 엔터 키를 누르면 저장, ESC는 취소
+  input.onkeydown = async (e) => {
+    if (e.key === 'Enter') await saveNote(cell, table, id, input.value);
+    if (e.key === 'Escape') cell.innerText = oldText;
+  };
+
+  // 마우스를 다른 데 찍으면 저장
+  input.onblur = async () => {
+    await saveNote(cell, table, id, input.value);
+  };
+}
+
+/* 2. 수정된 비고 데이터베이스에 저장 */
+async function saveNote(cell, table, id, newText) {
+  const tableName = (table === 'parts') ? 'spare_parts' : 'spare_parts_logs';
+  const column = 'note';
+
+  const { error } = await sb.from(tableName).update({ [column]: newText }).eq('id', id);
+
+  if (error) {
+    alert("저장 실패: " + error.message);
+    cell.innerText = "에러발생";
+  } else {
+    cell.innerText = newText;
+    // 입출고 이력일 경우 상단 선택 박스 등 데이터 갱신이 필요할 수 있으나 비고는 독립적이므로 텍스트만 교체
+  }
+}
+  
 
 document.getElementById("login-pw").addEventListener("keypress", e => e.key === "Enter" && checkLogin());
 document.getElementById("search").addEventListener("keypress", e => e.key === "Enter" && loadParts());
