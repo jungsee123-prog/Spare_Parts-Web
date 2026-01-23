@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>예비품 재고 관리</title>
+  <title>예비품 재고 관리 시스템</title>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    /* 1. 로그인 화면 스타일 */
+    /* [화면 디자인] 로그인 창, 레이아웃, 테이블 스타일 설정 */
     #login-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #f8fafc; display: flex; align-items: center; justify-content: center;
@@ -22,38 +22,22 @@
     .login-box h2 { margin-bottom: 20px; color: #1e3a8a; }
     .login-box input { width: 100%; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
     .login-box button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .login-box button:hover { background: #1d4ed8; }
-
-    /* 2. 전체 레이아웃 */
+    
     body { font-family: "Segoe UI", Arial, sans-serif; background: #f5f7fb; padding: 20px; color: #111827; line-height: 1.5; }
     .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
-    .header .title h2 { margin: 0; font-size: 22px; }
-    .header .title span { font-size: 13px; color: #6b7280; }
-    .company img { height: 60px; }
-
-    /* 3. 공통 요소 */
-    h3 { margin-top: 30px; border-left: 5px solid #2563eb; padding-left: 10px; margin-bottom: 15px; }
-    input, select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; margin: 5px 5px 5px 0; min-width: 150px; }
-    button { padding: 8px 14px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #1e40af; }
-    hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
-
-    /* 4. 테이블 스타일 */
+    
+    /* 테이블 내 가독성을 위한 스타일 */
     .table-wrapper { max-height: 600px; overflow-y: auto; overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: white; position: relative; }
     table { width: 100%; border-collapse: separate; border-spacing: 0; }
     thead th { position: sticky; top: 0; background: #f8fafc; z-index: 10; font-weight: bold; padding: 12px 10px; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e5e7eb; text-align: left; white-space: nowrap; cursor: pointer; }
-    thead th:hover { background-color: #f1f5f9; }
-    td { padding: 10px; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; text-align: left; }
-    th:last-child, td:last-child { border-right: none; }
-    tbody tr:hover { background: #f1f5f9; }
-
-    /* 5. 상태 표시 */
+    
+    /* 재고 부족(0개) 및 입출고 구분 색상 */
     .low-stock { background-color: #fffbeb !important; }
-    .low-stock td { border-bottom: 1px solid #fef3c7 !important; }
     .type-in { color: #2563eb; font-weight: bold; }
     .type-out { color: #dc2626; font-weight: bold; }
-    .sort-asc::after { content: " ▲"; font-size: 10px; }
-    .sort-desc::after { content: " ▼"; font-size: 10px; }
+    
+    /* 비고란 수정 시 시각적 효과 */
+    td[onclick]:hover { background-color: #f1f5f9 !important; }
   </style>
 </head>
 <body>
@@ -61,8 +45,8 @@
 <div id="login-overlay">
   <div class="login-box">
     <h2>재고관리 로그인</h2>
-    <input type="text" id="login-id" placeholder="아이디를 입력하세요" />
-    <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요" />
+    <input type="text" id="login-id" placeholder="아이디" />
+    <input type="password" id="login-pw" placeholder="비밀번호" />
     <button onclick="checkLogin()">로그인</button>
     <p id="login-msg" style="color: red; font-size: 13px; margin-top: 10px;"></p>
   </div>
@@ -97,7 +81,7 @@
 
 <h3>현재 재고</h3>
 <div style="margin-bottom: 15px;">
-  <input id="search" placeholder="예비품명으로 재고 검색..." style="width: 250px;" />
+  <input id="search" placeholder="예비품명으로 검색..." style="width: 250px;" />
   <button onclick="loadParts()">조회</button>
   <button onclick="resetSearch()" style="background: #6b7280;">초기화</button>
   <button onclick="downloadExcel('list', '현재재고현황')" style="background: #16a34a; margin-left: 10px;">엑셀 저장</button>
@@ -111,7 +95,7 @@
         <th onclick="sortTable('list', 2)">예비품명</th>
         <th onclick="sortTable('list', 3, true)">수량</th>
         <th onclick="sortTable('list', 4)">보관위치</th>
-        <th onclick="sortTable('list', 5)">비고</th>
+        <th onclick="sortTable('list', 5)">비고(수정가능)</th>
       </tr>
     </thead>
     <tbody id="list"></tbody>
@@ -137,7 +121,7 @@
         <th onclick="sortTable('all_log_list', 3)">중분류</th>
         <th onclick="sortTable('all_log_list', 4)">예비품명</th>
         <th onclick="sortTable('all_log_list', 5, true)">수량</th>
-        <th onclick="sortTable('all_log_list', 6)">비고</th>
+        <th onclick="sortTable('all_log_list', 6)">비고(수정가능)</th>
       </tr>
     </thead>
     <tbody id="all_log_list"></tbody>
@@ -145,14 +129,19 @@
 </div>
 
 <script>
-/* ===== 1. 설정 및 초기화 ===== */
+/**
+ * [1. 전역 설정]
+ * 데이터베이스 연결 정보 및 마스터 정보 설정
+ */
 const SUPABASE_URL = "https://tgkwhchuoxuvitnsaqjo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_EhWgQhfjCTAdrWTQRUPYKg_c-UU2m2y";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const MASTER_ID = "bio_admin";
 const MASTER_PW = "#qkdldh123!";
-const INACTIVITY_TIME = 30 * 60 * 1000;
+const INACTIVITY_TIME = 30 * 60 * 1000; // 자동 로그아웃 시간(30분)
+
+// 카테고리 맵핑 (대분류-중분류)
 const CATEGORIES = {
   "반입및전처리설비": ["반입장", "호퍼 자동개폐기", "음식물 배출컨베이어", "음식물 이송컨베이어", "음식물 공급컨베이어", "협잡물 이송컨베이어", "1차 파쇄기", "가용화조", "가용화조 블로워", "음폐수저장조#A", "음폐수저장조#B", "음폐수저장조 교반기", "중간저장조", "중간저장조 교반기", "슬러리 이송펌프", "음폐수 이송펌프", "유압유니트", "드럼스크린", "드럼스크린 테이퍼스크류", "회전분쇄공급기", "미세분쇄기"],
   "혐기성소화설비": ["혐기성소화조", "가스저장조", "안정화조", "안정화조 교반기", "임펄스펌프", "소화슬러지 이송펌프", "소화액반송펌프", "열교환순환펌프", "침전물배출펌프", "가온순환펌프", "공기압축기"],
@@ -163,13 +152,18 @@ const CATEGORIES = {
   "기타설비": ["공정수조", "지하수조", "소방수조", "공정수 부스터 펌프", "지하수 부스터 펌프", "소방펌프", "소방설비", "압롤박스실", "SUMP#1", "SUMP#2", "SUMP#3", "SUMP#4", "SUMP#5", "SUMP#6", "기계설비실", "배수로", "시설동", "소화동", "비상저류조", "기타"]
 };
 
-let logoutTimer;
+let logoutTimer; // 자동 로그아웃을 위한 타이머 변수
 
+/**
+ * [2. 로그인 및 보안 기능]
+ * 세션 유지 및 자동 로그아웃 처리
+ */
 window.onload = function() {
   const isLoggedIn = sessionStorage.getItem("isLoggedIn");
   const lastActivity = sessionStorage.getItem("lastActivity");
   const now = Date.now();
 
+  // 세션 정보가 있고 시간이 유효하면 즉시 시작
   if (isLoggedIn === "true" && (now - lastActivity < INACTIVITY_TIME)) {
     document.getElementById("login-overlay").style.display = "none";
     startApp();
@@ -189,11 +183,12 @@ function checkLogin() {
 }
 
 function startApp() {
-  loadMainCategory();
-  loadParts();
-  loadOutParts();
-  loadAllLogs();
-  resetLogoutTimer();
+  loadMainCategory(); // 대분류 불러오기
+  loadParts();        // 현재 재고 불러오기
+  loadOutParts();     // 출고 선택 목록 불러오기
+  loadAllLogs();      // 전체 이력 불러오기
+  resetLogoutTimer(); // 로그아웃 타이머 시작
+  // 사용자의 움직임이 있으면 타이머 리셋
   window.onmousemove = resetLogoutTimer;
   window.onkeypress = resetLogoutTimer;
 }
@@ -210,7 +205,12 @@ function logout() {
   location.reload();
 }
 
-/* ===== 2. 비즈니스 로직 ===== */
+/**
+ * [3. 데이터 비즈니스 로직]
+ * DB 조회, 저장, 수정 등 핵심 기능
+ */
+
+// 카테고리 선택 박스 동적 생성
 function loadMainCategory() {
   const sel = document.getElementById("main_category");
   sel.innerHTML = '<option value="">대분류 선택</option>';
@@ -224,19 +224,30 @@ function updateMidCategory() {
   if (m) CATEGORIES[m].forEach(item => s.innerHTML += `<option value="${item}">${item}</option>`);
 }
 
+// 현재 재고 목록 조회
 async function loadParts() {
   const kw = document.getElementById("search").value;
   let q = sb.from("spare_parts").select("*").order("part_name", { ascending: true });
-  if (kw) q = q.ilike("part_name", `%${kw}%`);
+  if (kw) q = q.ilike("part_name", `%${kw}%`); // 품명 검색
+  
   const { data } = await q;
   const body = document.getElementById("list");
   body.innerHTML = "";
   data.forEach(r => {
     const cls = r.quantity < 1 ? "low-stock" : "";
-    body.innerHTML += `<tr class="${cls}"><td>${r.main_category}</td><td>${r.mid_category}</td><td>${r.part_name}</td><td>${r.quantity}</td><td>${r.location}</td><td onclick="editNote(this, 'parts', ${r.id})" style="cursor: text; color: #2563eb;">${r.note ?? ""}</td></tr>`;
+    body.innerHTML += `
+      <tr class="${cls}">
+        <td>${r.main_category}</td>
+        <td>${r.mid_category}</td>
+        <td>${r.part_name}</td>
+        <td>${r.quantity}</td>
+        <td>${r.location}</td>
+        <td onclick="editNote(this, 'parts', ${r.id})" style="cursor: text; color: #2563eb;">${r.note ?? ""}</td>
+      </tr>`;
   });
 }
 
+// 입고 저장 기능 (기존 품목이 있으면 업데이트, 없으면 신규 생성)
 async function savePart() {
   const m = document.getElementById("main_category").value;
   const s = document.getElementById("mid_category").value;
@@ -245,60 +256,80 @@ async function savePart() {
   const l = document.getElementById("storage_location").value.trim();
   const memo = document.getElementById("note").value.trim();
 
-  if (!n || q <= 0) return alert("입력값을 확인하세요.");
+  if (!n || q <= 0) return alert("품명과 수량을 입력하세요.");
+  
+  // 기존 DB에 동일 품목이 있는지 확인
   const { data: found } = await sb.from("spare_parts").select("*").eq("part_name", n).eq("main_category", m);
   const ex = found?.[0];
 
   let tid;
   if (ex) {
+    // 업데이트
     await sb.from("spare_parts").update({ quantity: ex.quantity + q, location: l, note: memo }).eq("id", ex.id);
     tid = ex.id;
   } else {
+    // 신규 생성
     const { data: newP } = await sb.from("spare_parts").insert([{ main_category: m, mid_category: s, part_name: n, quantity: q, location: l, note: memo }]).select().single();
     tid = newP.id;
   }
+  // 이력 테이블(Log)에 입고 내역 남기기
   await sb.from("spare_parts_logs").insert([{ part_id: tid, type: "IN", quantity: q, main_category: m, mid_category: s, part_name: n, note: memo }]);
   alert("입고 완료");
   startApp();
 }
 
-async function loadOutParts() {
-  const sel = document.getElementById("out_part_id");
-  sel.innerHTML = '<option value="">출고 예비품 선택</option>';
-  const { data } = await sb.from("spare_parts").select("*").gt("quantity", 0).order("part_name", { ascending: true });
-  data?.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.part_name} (${p.main_category}) [재고:${p.quantity}]</option>`);
-}
-
+// 출고 처리 기능
 async function outPart() {
   const id = Number(document.getElementById("out_part_id").value);
   const q = Number(document.getElementById("out_quantity").value);
-  if (!id || q <= 0) return alert("항목과 수량을 확인하세요.");
+  if (!id || q <= 0) return alert("출고 항목과 수량을 입력하세요.");
+  
   const { data: st } = await sb.from("spare_parts").select("*").eq("id", id).single();
-  if (st.quantity < q) return alert("재고 부족");
+  if (st.quantity < q) return alert("재고가 부족합니다.");
+  
+  // 수량 차감 업데이트
   await sb.from("spare_parts").update({ quantity: st.quantity - q }).eq("id", id);
-  await sb.from("spare_parts_logs").insert([{ part_id: id, type: "OUT", quantity: q, main_category: st.main_category, mid_category: st.mid_category, part_name: st.part_name, note: document.getElementById("out_note").value }]);
+  // 출고 내역 저장
+  await sb.from("spare_parts_logs").insert([{ 
+    part_id: id, type: "OUT", quantity: q, main_category: st.main_category, 
+    mid_category: st.mid_category, part_name: st.part_name, note: document.getElementById("out_note").value 
+  }]);
   alert("출고 완료");
   startApp();
 }
 
+// 입출고 이력 테이블 조회 (날짜 필터링)
 async function loadAllLogs() {
   const s = document.getElementById("start_date").value;
   const e = document.getElementById("end_date").value;
   let q = sb.from("spare_parts_logs").select("*").order("created_at", { ascending: false });
   if (s) q = q.gte("created_at", s + "T00:00:00");
   if (e) q = q.lte("created_at", e + "T23:59:59");
+  
   const { data } = await q;
   const body = document.getElementById("all_log_list");
   body.innerHTML = "";
   data?.forEach(l => {
     const cls = l.type === "IN" ? "type-in" : "type-out";
-    body.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td><td>${l.main_category}</td><td>${l.mid_category}</td><td>${l.part_name}</td><td>${l.quantity}</td><td onclick="editNote(this, 'logs', ${l.id})" style="cursor: text; color: #2563eb;">${l.note ?? ""}</td></tr>`;
+    body.innerHTML += `
+      <tr>
+        <td>${new Date(l.created_at).toLocaleString()}</td>
+        <td class="${cls}">${l.type === "IN" ? "입고" : "출고"}</td>
+        <td>${l.main_category}</td>
+        <td>${l.mid_category}</td>
+        <td>${l.part_name}</td>
+        <td>${l.quantity}</td>
+        <td onclick="editNote(this, 'logs', ${l.id})" style="cursor: text; color: #2563eb;">${l.note ?? ""}</td>
+      </tr>`;
   });
 }
 
-function resetSearch() { document.getElementById("search").value = ""; loadParts(); }
-function resetLogFilter() { document.getElementById("start_date").value = ""; document.getElementById("end_date").value = ""; loadAllLogs(); }
+/**
+ * [4. 유틸리티 및 기타 기능]
+ * 엑셀 다운로드, 정렬, 비고 수정 등
+ */
 
+// 테이블 헤더 클릭 시 정렬
 function sortTable(id, idx, isNum = false) {
   const table = document.getElementById(id);
   const rows = Array.from(table.querySelectorAll("tr"));
@@ -311,67 +342,70 @@ function sortTable(id, idx, isNum = false) {
   table.setAttribute("data-dir", dir ? "asc" : "desc");
 }
 
+// ExcelJS를 이용한 고급 엑셀 저장
 async function downloadExcel(bodyId, name) {
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Sheet1');
+  const ws = wb.addWorksheet('재고목록');
   const table = document.getElementById(bodyId).closest('table');
   const headers = [];
   table.querySelectorAll('thead th').forEach(th => headers.push(th.innerText));
+  
   const row = ws.addRow(headers);
+  // 헤더 스타일(남색 배경, 흰색 글자)
   row.eachCell(c => {
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
     c.font = { color: { argb: 'FFFFFFFF' }, bold: true };
     c.alignment = { horizontal: 'center' };
   });
+  
+  // 본문 데이터 추가
   table.querySelectorAll(`tbody#${bodyId} tr`).forEach(tr => {
     const data = [];
     tr.querySelectorAll('td').forEach(td => data.push(td.innerText));
     ws.addRow(data);
   });
-  ws.columns = bodyId === 'list' ? [{width:20},{width:20},{width:30},{width:10},{width:20},{width:30}] : [{width:25},{width:10},{width:20},{width:20},{width:30},{width:10},{width:30}];
+  
+  // 열 너비 자동 설정
+  ws.columns = bodyId === 'list' 
+    ? [{width:20},{width:20},{width:30},{width:10},{width:20},{width:30}] 
+    : [{width:25},{width:10},{width:20},{width:20},{width:30},{width:10},{width:30}];
+    
   const buf = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buf]), `${name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-/* 1. 비고 셀 수정 모드 전환 */
+// 비고(메모) 셀 클릭 시 즉시 수정을 위한 함수
 function editNote(cell, table, id) {
-  // 이미 수정 중이면 중단
-  if (cell.querySelector('input')) return;
-
+  if (cell.querySelector('input')) return; // 이미 수정 중이면 무시
   const oldText = cell.innerText;
   cell.innerHTML = `<input type="text" value="${oldText}" style="width: 90%; padding: 4px;">`;
   const input = cell.querySelector('input');
   input.focus();
 
-  // 엔터 키를 누르면 저장, ESC는 취소
   input.onkeydown = async (e) => {
     if (e.key === 'Enter') await saveNote(cell, table, id, input.value);
     if (e.key === 'Escape') cell.innerText = oldText;
   };
-
-  // 마우스를 다른 데 찍으면 저장
-  input.onblur = async () => {
-    await saveNote(cell, table, id, input.value);
-  };
+  input.onblur = async () => await saveNote(cell, table, id, input.value);
 }
 
-/* 2. 수정된 비고 데이터베이스에 저장 */
+// 수정된 비고를 DB에 반영
 async function saveNote(cell, table, id, newText) {
   const tableName = (table === 'parts') ? 'spare_parts' : 'spare_parts_logs';
-  const column = 'note';
-
-  const { error } = await sb.from(tableName).update({ [column]: newText }).eq('id', id);
-
+  const { error } = await sb.from(tableName).update({ note: newText }).eq('id', id);
   if (error) {
-    alert("저장 실패: " + error.message);
-    cell.innerText = "에러발생";
+    alert("저장 실패");
+    cell.innerText = "Error";
   } else {
     cell.innerText = newText;
-    // 입출고 이력일 경우 상단 선택 박스 등 데이터 갱신이 필요할 수 있으나 비고는 독립적이므로 텍스트만 교체
   }
 }
-  
 
+// 기타 리셋 기능
+function resetSearch() { document.getElementById("search").value = ""; loadParts(); }
+function resetLogFilter() { document.getElementById("start_date").value = ""; document.getElementById("end_date").value = ""; loadAllLogs(); }
+
+// 엔터 키 이벤트 등록
 document.getElementById("login-pw").addEventListener("keypress", e => e.key === "Enter" && checkLogin());
 document.getElementById("search").addEventListener("keypress", e => e.key === "Enter" && loadParts());
 </script>
